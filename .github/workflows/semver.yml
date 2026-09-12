@@ -40,44 +40,35 @@ jobs:
       - name: Install system release tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes bats curl make shellcheck shfmt
+          sudo apt-get install --yes curl gawk make mawk
 
       - name: Validate maintained source
         run: make check
 
-      - name: Synchronize and verify repository dependencies
+      - name: Synchronize and verify repository tools
         run: |
           make deps
           make deps-check
 
-      - name: Build release artifacts and checksums
-        run: |
-          make build VERSION="${{ steps.calculate-version.outputs.version-string }}"
+      - name: Build exact release artifacts
+        run: make build VERSION="${{ steps.calculate-version.outputs.version-string }}"
 
       - name: Validate exact release artifacts
         run: |
-          make test VERSION="${{ steps.calculate-version.outputs.version-string }}"
-          mapfile -t artifacts < <(find dist -maxdepth 1 -type f -name '*.bash' -perm -u+x -print | sort)
+          make test VERSION="${{ steps.calculate-version.outputs.version-string }}" AWK_BIN=gawk
+          make test VERSION="${{ steps.calculate-version.outputs.version-string }}" AWK_BIN=mawk
+          mapfile -t artifacts < <(find dist -maxdepth 1 -type f -name 'awk-minifier*.awk' -perm -u+x -print | sort)
           test "${#artifacts[@]}" -eq 3
+          cmp dist/awk-minifier.dev.awk dist/awk-minifier.min.awk
           for artifact in "${artifacts[@]}"; do
-            bash -n "${artifact}"
-          done
-
-      - name: Validate exact release artifacts with Bash 4.3
-        run: |
-          for artifact in dist/*.bash; do
-            docker run --rm \
-              --env BASH_STARTER_ARTIFACT="/work/${artifact}" \
-              --volume "${GITHUB_WORKSPACE}:/work:ro" \
-              --workdir /work \
-              bash:4.3 \
-              bash tests/compat-bash43.bash
+            gawk -f "${artifact}" </dev/null >/dev/null
+            mawk -f "${artifact}" </dev/null >/dev/null
           done
 
       - name: Verify checksums
         run: |
           cd dist
-          for checksum in *.bash.sha256; do
+          for checksum in *.awk.sha256; do
             sha256sum -c "${checksum}"
           done
 
@@ -85,8 +76,8 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
-            dist/*.bash
-            dist/*.bash.sha256
+            dist/*.awk
+            dist/*.awk.sha256
 
       - name: Create release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
@@ -99,5 +90,5 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            dist/*.bash
-            dist/*.bash.sha256
+            dist/*.awk
+            dist/*.awk.sha256

@@ -2,38 +2,56 @@
 
 The release pipeline calculates a semantic version from Conventional Commits
 without creating a tag, validates the exact bytes intended for publication, and
-creates the GitHub release/tag only after validation succeeds.
+creates the GitHub release and tag only after validation succeeds.
 
 The expected sequence is:
 
-1. calculate the version with `bitshifted/git-auto-semver` and
-   `create_tag: false`;
-2. run maintained-source checks;
-3. run `make deps` and `make deps-check`;
-4. build all artifact flavors with the calculated version;
-5. execute the Bats behavior contract against the exact generated artifacts;
-6. execute representative compatibility behavior under Bash 4.3;
-7. verify every `.sha256` checksum;
-8. attest all release files; and
-9. create the GitHub release and tag with all six artifacts attached.
+1. calculate the candidate version with tag creation disabled;
+2. validate maintained modular AWK source;
+3. synchronize and verify pinned repository tools;
+4. build all three `.awk` artifact flavors with the candidate version;
+5. run the public behavior suite against the exact generated artifacts under GNU
+   awk and mawk;
+6. verify the bootstrap lineage rule that `.min.awk` equals `.dev.awk` until a
+   prior released transformer is intentionally pinned;
+7. smoke-test every artifact as an AWK program;
+8. verify every `.awk.sha256` companion;
+9. attest the release artifacts and checksum companions; and
+10. create the GitHub release and tag.
 
-New releases publish only `.sha256` checksum companions.  Historical releases
-that contain `.256` companions remain unchanged.  A consumer that verifies
-artifacts across release generations should request `<artifact>.sha256` first and
-may use `<artifact>.256` only when the preferred companion is confirmed absent.
-Transport, TLS, authorization, server, malformed-content, and checksum-verification
-failures remain failures rather than fallback conditions.
+Publication is the consequence of successful validation rather than a prerequisite
+for it.  A failure before the final release step should therefore leave no new tag.
 
-Published checksum companions are release verification data.  They do not replace
-the committed SHA-256 digests that authorize bashdeps or dependencies declared in
-`dependencies.txt`.
+## Bootstrap minification
 
-The Conventional Commit mapping used by the selected SemVer action supports the
-full semantic progression: `feat` increments minor, `BREAKING CHANGE` increments
-major, and supported maintenance types increment patch.
+The initial AWK Minifier release line does not pretend to possess a prior trusted
+AWK Minifier.  Its `awk-minifier.min.awk` is intentionally an exact copy of
+`awk-minifier.dev.awk`.
 
-A release failure before the final step should leave no newly-created release
-tag.  This ordering is deliberate: publication is the consequence of successful
-validation, not a prerequisite for it.
+After a trustworthy released version exists, a later accepted change may add that
+immutable released artifact to `dependencies.txt` and use it as
+`vendor/awk-minifier.awk` to transform subsequent production `.min.awk` artifacts.
+The current candidate remains prohibited as its own production trust root.
 
-See ADR-012 for checksum companion naming and historical-read compatibility.
+## Checksums
+
+New releases publish only `.sha256` checksum companions.  Historical release
+assets are not rewritten.  The checksum files verify distributed artifact bytes;
+they do not replace the committed SHA-256 digests that authorize Bashdeps-managed
+repository dependencies.
+
+## Release contents
+
+A normal release contains six files:
+
+```text
+awk-minifier.dev.awk
+awk-minifier.dev.awk.sha256
+awk-minifier.awk
+awk-minifier.awk.sha256
+awk-minifier.min.awk
+awk-minifier.min.awk.sha256
+```
+
+All three executable artifacts must satisfy the same public source-transformation
+contract even when their representation differs.
