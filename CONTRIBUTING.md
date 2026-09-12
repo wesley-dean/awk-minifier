@@ -1,70 +1,78 @@
-# Contributing
+# Contributing to AWK Minifier
 
-Contributions are welcome.  template-bash is intended to encode reusable Bash
-engineering practices rather than force every derived project into one product
-shape, so changes should distinguish between starter-wide lessons and behavior
-that belongs only in one derived project.
+Thank you for contributing.
 
-Before consequential work, please read:
+Before proposing changes, read `README.md`, `AGENTS.md`, `doc/decisions.md`, and
+the ADRs relevant to the area being changed.  Accepted ADRs define the current
+architecture and should not be silently contradicted by an implementation change.
 
-- `README.md` for the starter's purpose and build lifecycle;
-- `doc/engineering-philosophy.md` for reusable engineering posture;
-- `doc/decisions.md` and the governing ADRs under `doc/adr/`;
-- `AGENTS.md` for the concise repository map;
-- `doc/documentation-standard.md` before editing maintained Bash comments;
-- `doc/testing.md` before changing tests or generated artifacts; and
-- `doc/release-verification.md` before changing release behavior.
+## Development workflow
 
-## Development Expectations
+Maintained product code is portable AWK.  Build and repository orchestration may
+use Bash and GNU Make.
 
-Prefer focused changes with a clear contract.  Consequential architectural work
-should update or add an ADR.  When a change is broadly reusable across derived
-projects, document the reusable principle rather than only the implementation that
-happened to expose it.
+Typical local validation is:
 
-The canonical validation surfaces are:
-
-```text
+```bash
+make build
 make check
 make test
-make test-report
-make docs
+```
+
+When multiple AWK implementations are available, run the suite against them:
+
+```bash
+make test AWK_BIN=mawk
+make test AWK_BIN=gawk
+```
+
+Repository-scoped tools are prepared explicitly:
+
+```bash
+make deps
 make deps-check
 ```
 
-Generated files under `dist/`, `doc/reference/`, `test-results/`, and `vendor/`
-are not maintained source and should not be edited directly.
+Shared standards use their own lifecycle:
 
-Public APIs, Make targets, artifact names, environment variables, output formats,
-and return statuses can become compatibility commitments in derived projects.
-Avoid exposing implementation details merely because they are convenient to
-access.
+```bash
+make standards
+make standards-check
+```
 
-## Adapting the Starter
+Do not make `build`, `test`, or `docs` silently acquire dependencies.
 
-Derived projects are expected to remove or reinterpret starter behavior that does
-not fit their domain.  In particular, the runtime plugin registry and noop plugin
-are teaching examples, not universal requirements for modular Bash source.
+## Source documentation
 
-Before a derived project's first release, review repository-facing files such as
-README, `SUPPORT.md`, `SECURITY.md`, issue templates, and pull-request guidance for
-stale template names, links, assumptions, or policies.
+Maintained AWK follows the shared AWK documentation standard synchronized from
+`wesley-dean/coding_standards`.  Public and maintained source contracts should be
+captured in `##` Doxygen blocks compatible with `awk-doxygen`.
 
-## Reporting Problems
+## Testing expectations
 
-Use `SUPPORT.md` for ordinary support and bug-report guidance.  Suspected
-vulnerabilities should be reported according to `SECURITY.md` rather than in a
-public issue.
+A behavioral change should include evidence appropriate to its risk.  For source
+transformation behavior this normally means both focused exact-output fixtures and
+semantic-equivalence tests.
 
-## Collaboration Policy
+Please include regression coverage for changes involving:
 
-Contributors are expected to follow `CODE_OF_CONDUCT.md`.
+- comments or whitespace;
+- string or regexp literal escaping;
+- slash classification;
+- division or `/=`;
+- physical newlines or continuations;
+- malformed input and diagnostics; or
+- differences among modular and assembled artifact forms.
 
-## Public Domain
+The current candidate must never be used as its own production minification trust
+root.  During bootstrap, `dist/awk-minifier.min.awk` is intentionally a copy of
+`dist/awk-minifier.dev.awk`.
 
-This project is dedicated to the public domain within the United States, and
-copyright and related rights in the work worldwide are waived through the
-[CC0 1.0 Universal public domain dedication](https://creativecommons.org/publicdomain/zero/1.0/).
+## Commits and pull requests
 
-See [`LICENSE`](LICENSE) for the repository's license text.  By contributing, you
-agree that your contribution will be released under the same CC0 dedication.
+Use Conventional Commit titles so release automation can determine semantic
+version impact.  Keep pull requests cohesive and avoid unrelated cleanup.
+
+A consequential change to architecture, public behavior, compatibility, security
+boundaries, dependency trust, or release provenance may require a new or updated
+ADR.  When ADRs change, update `doc/decisions.md` as part of the same pull request.

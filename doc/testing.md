@@ -1,102 +1,83 @@
 # Testing
 
-The starter uses Bats for behavior-oriented tests and exercises every generated
-artifact flavor.  The goal is to validate what consumers execute rather than
-assume concatenation, comment stripping, minification, packaging, or other build
-transformations cannot change behavior.
+AWK Minifier uses a portable shell harness in `tests/run-tests.sh`.  The harness
+is parameterized by `AWK_BIN` so the same behavior contract can be exercised
+against multiple AWK implementations without rewriting fixtures.
 
-Tests live under `tests/`.  Prefer a larger number of focused tests over a small
-number of broad fixtures.  A failing test should normally identify one primary
-contract.
+Tests are evidence for documented behavior and accepted ADRs.  They do not replace
+those architectural sources.
 
-## Test the Contract, Not an Incidental Snapshot
+## Execution surfaces
 
-Tests should derive from documented behavior, ADR constraints, and explicit
-security properties.  They are evidence for the intended contract rather than the
-source of architectural intent.
+The public behavior contract is exercised through:
 
-Prefer durable invariants over mutable suite snapshots.  For example:
+- maintained modular source using repeated `awk -f` arguments;
+- `dist/awk-minifier.dev.awk`;
+- `dist/awk-minifier.awk`; and
+- `dist/awk-minifier.min.awk`.
 
-```text
-every shipped artifact receives the same behavior contract
-```
+A build transformation is part of the product pipeline, so an artifact is not
+assumed correct merely because maintained source passed tests.
 
-is a useful maintained requirement.  A statement such as:
+## Required evidence
 
-```text
-the suite contains 137 tests
-```
+Changes to transformation behavior should use focused fixtures that cover both
+exact output and semantic equivalence where practical.  Important classes include:
 
-is ordinarily transient CI output unless an exact count is itself somehow part of
-the contract.
+- comments adjacent to tokens;
+- `#` inside strings and regexp literals;
+- escaped quotes and escaped regexp delimiters;
+- division, chained division, and `/=`;
+- regexp pattern rules and match operators;
+- horizontal whitespace and indentation;
+- physical newlines and backslash continuations;
+- malformed strings and regexp literals;
+- first-line shebang handling; and
+- idempotence of the transformation.
 
-## Positive and Negative Assertions
+Malformed-input tests must assert both a nonzero exit status and empty STDOUT.
+This protects the buffered-output contract: an error must not expose a partial
+transformation that a caller could mistake for success.
 
-Positive assertions prove that expected behavior occurs.  Security, privacy,
-output-separation, destructive-operation, and fail-closed contracts often require
-negative assertions as well.
+## Semantic comparisons
 
-When the contract says something must not happen, test that absence explicitly.
-Examples include:
+For valid fixtures whose exact output bytes are not the contract, execute both the
+original and transformed AWK program against the same input and compare their
+observable output.  This is especially important for slash classification and
+newline-sensitive syntax, where a visually plausible transformation can still
+change meaning.
 
-- protected data does not appear in stdout, stderr, diagnostics, or generated
-  artifacts;
-- a failed safety check does not modify files;
-- stdout remains free of diagnostics when it is a data channel;
-- a machine-readable format does not contain terminal control bytes;
-- invalid input does not silently trigger a fallback path; and
-- a network-free build does not acquire dependencies.
+## Portability
 
-Observing the intended replacement, error message, or success value is not enough
-if forbidden behavior could still occur through another observable path.
+CI exercises the suite under GNU awk, mawk, BusyBox awk, and the macOS system AWK
+where practical.  `AWK_BIN` is an executable path or command name, not a shell
+fragment; wrappers such as BusyBox should therefore be exposed through an `awk`
+symlink when needed.
 
-Threat-model findings should drive tests for important mitigations and residual
-boundaries where executable evidence is practical.  See `doc/threat-modeling.md`.
+A portability failure is a product failure unless repository governance explicitly
+allows the implementation-specific behavior.
 
-## Artifact Matrix
+## Build evidence
 
-`make test` runs the suite against the development, stripped, and minified
-artifacts.  `make test-report` repeats the suite and writes JUnit XML under
-`test-results/` for CI reporting.
+`make build` must remain network-free and independent of prepared repository
+dependencies during bootstrap.  CI verifies that a fresh build does not create
+`vendor/`.
 
-The starter suite covers its own example behavior: help and version output,
-build metadata, plugin discovery, noop execution, invalid plugin handling,
-artifact shape, `.sha256` checksum companions, absence of stale `.256`
-companions, and standalone runtime behavior.  A derived project should replace
-or extend these examples with tests for its actual public contracts.
+The build must produce exactly three executable `.awk` release artifacts with
+adjacent `.sha256` companions.  During bootstrap, the development and minified
+artifacts must compare byte-for-byte equal.  The ordinary artifact should differ
+because project-governed Doxygen lines are stripped.
 
-Generated artifacts are products.  A change that affects assembly, comment
-stripping, minification, embedded dependencies, provenance, or checksums should be
-validated against the artifact bytes and behavior rather than only against
-maintained source.
+Repeated builds with the same source, version, commit, and commit-derived build
+date must produce identical artifact and checksum bytes.
 
-## Build and Compatibility Evidence
+## Dependency and documentation evidence
 
-CI plants legacy `.256` companions before a rebuild and verifies that a successful
-`make build` removes them while preserving deterministic executable bytes and
-valid `.sha256` companions.
+`make deps` is the explicit network-capable path for repository tools;
+`make deps-check` verifies prepared state offline.  `make standards` and
+`make standards-check` provide the equivalent separate lifecycle for synchronized
+shared standards.
 
-Syntax validation and ShellCheck are part of `make check`, not substitutes for
-behavior tests.  Release verification additionally checks exact artifact hashes
-and minimum-Bash compatibility.
-
-The minimum supported Bash version is a runtime contract.  Exercise
-representative behavior under that floor rather than relying on modern-runner
-syntax validation alone.
-
-## Documentation Generation Evidence
-
-Documentation generation has its own observable boundary.  `make docs` and
-`make adr-index` consume prepared repository dependencies and must not acquire or
-repair them.  CI should therefore include a negative case that withholds adrctl
-while otherwise satisfying the earlier documentation prerequisite and verifies
-that documentation generation fails without bootstrapping dependency state.
-
-A successful documentation build should verify that `doc/adr/README.md` exists,
-contains the current ADR corpus, and is ignored by Git; that
-`doc/reference/index.html` exists and is ignored; and that tracked repository
-state remains clean.  These checks distinguish maintained source from generated
-navigation and rendered reference output rather than relying on ignore rules as
-an undocumented convention.
-
-See ADR-010 and ADR-017 for the generated-documentation ownership model.
+`make docs` consumes prepared `awk-doxygen` and `adrctl` state without acquiring
+or repairing dependencies.  CI verifies generated ADR navigation and Doxygen HTML
+while confirming those products remain ignored generated state.
