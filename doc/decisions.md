@@ -40,11 +40,13 @@ See [ADR-002](adr/ADR-002-bash-runtime-and-portability-baseline.md) and
 ### ADR-003: Make as the Canonical Orchestration Interface
 
 GNU Make remains the canonical local and CI orchestration surface.  ADR-020
-specifies Bootstrap-style bashdeps preparation plus separate tool and standards
-lifecycles for this repository.
+specifies Bootstrap-style bashdeps preparation for executable repository tools,
+while ADR-025 moves shared coding-standards updates out of Make and into a
+manually dispatched GitHub Actions workflow.
 
-See [ADR-003](adr/ADR-003-make-as-canonical-orchestration-interface.md) and
-[ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md).
+See [ADR-003](adr/ADR-003-make-as-canonical-orchestration-interface.md),
+[ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md), and
+[ADR-025](adr/ADR-025-github-managed-coding-standards.md).
 
 ### ADR-004: Modular Source Assembly and Automatically Discovered Plugins
 
@@ -58,12 +60,14 @@ See [ADR-004](adr/ADR-004-modular-source-and-plugin-discovery.md),
 
 ### ADR-005: Dependency Management and Explicit Network Boundaries
 
-bashdeps manages pinned repository dependencies while system packages remain
-outside bashdeps scope.  ADR-020 preserves explicit network convergence and
-offline verification while adding a separate standards manifest/destination.
+bashdeps manages pinned executable repository dependencies while system packages
+remain outside bashdeps scope.  ADR-025 moves shared standards to a separate
+GitHub Actions release-archive lifecycle while preserving explicit network
+boundaries and network-free normal development.
 
-See [ADR-005](adr/ADR-005-dependency-management-and-network-boundaries.md) and
-[ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md).
+See [ADR-005](adr/ADR-005-dependency-management-and-network-boundaries.md),
+[ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md), and
+[ADR-025](adr/ADR-025-github-managed-coding-standards.md).
 
 ### ADR-006: Three Release Artifact Flavors, Metadata, and Checksums
 
@@ -154,13 +158,14 @@ and [ADR-018](adr/ADR-018-portable-awk-runtime-and-explicit-source-assembly.md).
 Every dependency expands the trusted computing base and is reviewed according to
 execution context, authority, parsed inputs, side effects, transitive surface,
 supply-chain posture, and failure behavior.  ADR-024 applies that review to the
-v0.2.1 AWK Minifier now used as executable production build input while preserving
-the controls first established for v0.1.0 by ADR-022.
+v0.2.1 AWK Minifier now used as executable production build input while ADR-025
+applies the same posture to the GitHub-hosted standards-update boundary.
 
 See [ADR-015](adr/ADR-015-dependencies-as-explicit-attack-surface.md),
 [ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md),
-[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md), and
-[ADR-024](adr/ADR-024-pin-v0.2.1-production-minifier.md).
+[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md),
+[ADR-024](adr/ADR-024-pin-v0.2.1-production-minifier.md), and
+[ADR-025](adr/ADR-025-github-managed-coding-standards.md).
 
 ### ADR-016: Explicit Threat Modeling for Security-Relevant Changes
 
@@ -205,14 +210,14 @@ See [ADR-019](adr/ADR-019-release-artifacts-and-bootstrap-minification.md),
 
 ### ADR-020: Bashdeps-Managed Tools and Standards
 
-Make directly bootstraps only bashdeps, which then manages pinned executable tools
-through `dependencies.txt`.  The tool manifest includes the v0.2.1 AWK Minifier
-selected by ADR-024, while shared normative files from `coding_standards` retain
-their separate `dependencies-standards.txt` lifecycle.
+Make directly bootstraps only bashdeps, which manages pinned executable tools
+through `dependencies.txt`.  ADR-025 supersedes ADR-020's former
+`dependencies-standards.txt`, `make standards`, and `make standards-check`
+requirements while leaving executable tool management intact.
 
 See [ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md),
-[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md), and
-[ADR-024](adr/ADR-024-pin-v0.2.1-production-minifier.md).
+[ADR-024](adr/ADR-024-pin-v0.2.1-production-minifier.md), and
+[ADR-025](adr/ADR-025-github-managed-coding-standards.md).
 
 ### ADR-021: AWK Documentation and Portability Testing
 
@@ -258,3 +263,16 @@ The v0.2.0 release is deliberately not selected because its tag points to the
 earlier pre-ADR-023 implementation.
 
 See [ADR-024](adr/ADR-024-pin-v0.2.1-production-minifier.md).
+
+### ADR-025: Manage Shared Coding Standards Through GitHub Releases
+
+Shared coding standards are no longer synchronized as individually pinned
+bashdeps files.  A manually dispatched GitHub Actions workflow resolves one
+`coding_standards` release, populates a tracked `.codingstandardrc`, verifies the
+single release archive, and materializes a complete tracked `doc/standards/` tree.
+The populated configuration is re-read before download so the configuration
+proposed for commit is the same configuration that drives materialization.  Normal
+development and coding-agent startup consume the committed standards without a
+network bootstrap.
+
+See [ADR-025](adr/ADR-025-github-managed-coding-standards.md).
