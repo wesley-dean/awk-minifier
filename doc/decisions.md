@@ -96,11 +96,12 @@ See [ADR-008](adr/ADR-008-documentation-driven-test-second-development.md).
 
 ADR-021 supersedes Bats as the required primary product harness while preserving
 the invariant that every shipped artifact receives the same public behavior suite.
-The AWK harness is interpreter-parameterized and combines golden, semantic,
-negative, portability, idempotence, and regression evidence.
+ADR-023 adds physical-line count, grammar-aware newline classification, and
+candidate self-minification to the evidence required for newline behavior.
 
-See [ADR-009](adr/ADR-009-observable-behavior-testing.md) and
-[ADR-021](adr/ADR-021-awk-documentation-and-portability-testing.md).
+See [ADR-009](adr/ADR-009-observable-behavior-testing.md),
+[ADR-021](adr/ADR-021-awk-documentation-and-portability-testing.md), and
+[ADR-023](adr/ADR-023-grammar-aware-newline-elimination.md).
 
 ### ADR-010: Generated Reference Documentation Is Ephemeral
 
@@ -179,11 +180,12 @@ See [ADR-017](adr/ADR-017-generate-adr-navigation-ephemerally.md) and
 
 The product is implemented in portable AWK as explicitly ordered,
 responsibility-focused modules that are directly runnable with repeated `awk -f`
-arguments and deterministically assembled into standalone artifacts.  Lexical
-state and contextual recognition govern safe transformation; runtime plugin
-machinery is removed.
+arguments and deterministically assembled into standalone artifacts.  ADR-023
+refines its conservative gap handling with explicit grammar context so physical
+newlines can be removed without abandoning semantic-preservation priority.
 
-See [ADR-018](adr/ADR-018-portable-awk-runtime-and-explicit-source-assembly.md).
+See [ADR-018](adr/ADR-018-portable-awk-runtime-and-explicit-source-assembly.md) and
+[ADR-023](adr/ADR-023-grammar-aware-newline-elimination.md).
 
 ### ADR-019: Release Artifacts and Bootstrap Minification
 
@@ -225,3 +227,15 @@ pinned transformer is unavailable, and verify exact previous-release lineage in
 CI and release validation.
 
 See [ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md).
+
+### ADR-023: Grammar-Aware Newline Elimination
+
+Successful transformed source contains no physical newlines except the one that
+must terminate a preserved first-line shebang.  Grammar-optional newlines are
+discarded, significant statement and rule terminators become semicolons, and
+backslash-newline continuation disappears as a lexical continuation.  Structural
+context distinguishes control headers, function definitions, and `do ... while`
+trailers, while production `.min.awk` provenance remains governed independently by
+ADR-022.
+
+See [ADR-023](adr/ADR-023-grammar-aware-newline-elimination.md).

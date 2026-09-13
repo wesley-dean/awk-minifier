@@ -9,7 +9,7 @@ DIST_SCRIPT := $(DIST_DIR)/awk-minifier.awk
 DIST_MIN_SCRIPT := $(DIST_DIR)/awk-minifier.min.awk
 DIST_SCRIPTS := $(DIST_DEV_SCRIPT) $(DIST_SCRIPT) $(DIST_MIN_SCRIPT)
 DIST_CHECKSUMS := $(addsuffix .sha256,$(DIST_SCRIPTS))
-SOURCE_FILES := src/diagnostics.awk src/output.awk src/lexer.awk src/main.awk
+SOURCE_FILES := src/diagnostics.awk src/output.awk src/context.awk src/lexer.awk src/transform.awk src/main.awk
 
 VENDOR_DIR := vendor
 DEPENDENCY_MANIFEST := dependencies.txt

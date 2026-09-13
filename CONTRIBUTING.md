@@ -64,14 +64,22 @@ Please include regression coverage for changes involving:
 - slash classification;
 - division or `/=`;
 - physical newlines or continuations;
+- control-flow and function-definition line breaks;
+- top-level rule separation;
 - malformed input and diagnostics; or
 - differences among modular and assembled artifact forms.
 
+ADR-023 makes physical line count an explicit minification invariant.  Successful
+output has one newline only when preserving a first-line shebang and otherwise has
+none.  Newline changes should demonstrate statement/rule separator insertion,
+grammar-optional newline removal, semantic equivalence, idempotence, and
+portability rather than relying on visual inspection of compressed output.
+
 The current candidate must never be used as its own production minification trust
 root.  Production `.min.awk` artifacts are built with the Bashdeps-pinned AWK
-Minifier v0.1.0 release.  Build-pipeline changes should preserve explicit
-previous-release lineage and fail rather than silently substituting another
-transformer.
+Minifier v0.1.0 release.  Candidate self-minification is test evidence only.
+Build-pipeline changes should preserve explicit previous-release lineage and fail
+rather than silently substituting another transformer.
 
 ## Commits and pull requests
 

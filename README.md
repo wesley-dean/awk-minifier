@@ -10,23 +10,35 @@ modules or assembled into standalone release artifacts.
 
 ## Current transformation policy
 
-The first implementation deliberately favors safety over maximum compression.  It:
+The transformer deliberately favors semantic safety over maximum compression.  It:
 
 - removes comments only when they are outside string and regexp literals;
 - collapses horizontal whitespace outside literals when a separator is still
   required;
-- preserves physical newlines rather than attempting broad statement joining;
+- classifies physical newlines using AWK grammar context, discarding
+  grammar-optional newlines and rendering statement or rule terminators as `;`;
+- removes explicit backslash-newline continuations between source tokens without
+  creating statement boundaries;
+- rejects backslash-newline inside string or regexp literals because the supported
+  AWK implementations do not agree on that source construct's semantics;
 - distinguishes regexp delimiters from division and `/=` using lexical context;
-- preserves string and regexp contents byte-for-byte while scanning escapes;
-- preserves a first-line AWK shebang;
+- preserves accepted string and regexp contents byte-for-byte while scanning
+  escapes;
+- preserves a first-line AWK shebang and its terminating newline;
 - buffers transformed output until the complete input has been validated; and
-- fails nonzero with a diagnostic on STDERR when a string or regexp literal is
-  unterminated.
+- fails nonzero with a diagnostic on STDERR for malformed or explicitly rejected
+  non-portable literal input.
 
-The project does not claim that this first implementation is a complete AWK parser
-or that it produces the smallest possible output.  When the transformer cannot
-safely prove that a more aggressive rewrite preserves meaning, the conservative
-representation wins.
+For successful portable-AWK input, transformed source contains exactly one
+physical newline when a first-line shebang is preserved and zero physical newlines
+otherwise.  AWK newlines are not treated as generic whitespace: true statement or
+rule boundaries become semicolons, while grammar-optional newlines disappear.
+
+The project does not claim that the implementation is a complete AWK parser or
+that it produces the smallest possible byte representation.  When the transformer
+cannot safely prove that a more aggressive rewrite preserves meaning across the
+supported portability floor, it fails conservatively rather than selecting one
+implementation's interpretation.
 
 ## Usage
 
@@ -43,7 +55,9 @@ The maintained modular source is directly executable in the same way:
 awk \
   -f src/diagnostics.awk \
   -f src/output.awk \
+  -f src/context.awk \
   -f src/lexer.awk \
+  -f src/transform.awk \
   -f src/main.awk \
   < input.awk > output.awk
 ```
@@ -69,6 +83,11 @@ Bashdeps as `vendor/awk-minifier.awk`.  The generated provenance header remains
 outside the transformer input so the final minified artifact still identifies its
 version, build date, build commit, and minifier version.  The current release
 candidate is never used as its own production trust root.
+
+The `.min.awk` file representation therefore still reflects the pinned previous
+release's minification behavior until a later release advances that trust anchor.
+The current candidate's more aggressive newline behavior is verified separately by
+self-minification tests; it does not self-host the production release pipeline.
 
 ## Building and testing
 
@@ -99,7 +118,10 @@ make test AWK_BIN=gawk
 
 Tests cover modular source and all assembled artifacts, exact transformations,
 semantic equivalence, malformed-input failure behavior, regexp/division
-classification, continuation handling, and idempotence.
+classification, grammar-aware newline elimination, control-flow continuation,
+portable explicit continuation between tokens, rejection of non-portable
+literal-internal continuation, physical-line invariants, candidate
+self-minification, and idempotence.
 
 ## Repository dependencies
 

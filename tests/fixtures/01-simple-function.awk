@@ -1,0 +1,7 @@
+function twice(value)
+{
+  return value * 2
+}
+BEGIN {
+  print twice(4)
+}
