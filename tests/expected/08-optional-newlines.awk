@@ -1,0 +1,1 @@
+BEGIN {truth = (1 &&1) ||0;print "left","right", truth;}

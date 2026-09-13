@@ -1,0 +1,1 @@
+BEGIN {x = 0;if (1)x++;else x += 100;while (x < 3)x++;for (i = 0; i < 2; i++)x++;do x++;while (x < 6);do {while (x < 7)x++;x++;} while (x < 8);if (x == 8) {if (1) {x++;} else {x += 1000;};};print x;}

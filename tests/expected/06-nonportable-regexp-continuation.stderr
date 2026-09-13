@@ -1,0 +1,1 @@
+awk-minifier: backslash-newline inside regexp literal is not portable

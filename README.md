@@ -10,23 +10,35 @@ modules or assembled into standalone release artifacts.
 
 ## Current transformation policy
 
-The first implementation deliberately favors safety over maximum compression.  It:
+The transformer deliberately favors semantic safety over maximum compression.  It:
 
 - removes comments only when they are outside string and regexp literals;
 - collapses horizontal whitespace outside literals when a separator is still
   required;
-- preserves physical newlines rather than attempting broad statement joining;
+- classifies physical newlines using AWK grammar context, discarding
+  grammar-optional newlines and rendering statement or rule terminators as `;`;
+- removes explicit backslash-newline continuations between source tokens without
+  creating statement boundaries;
+- rejects backslash-newline inside string or regexp literals because the supported
+  AWK implementations do not agree on that source construct's semantics;
 - distinguishes regexp delimiters from division and `/=` using lexical context;
-- preserves string and regexp contents byte-for-byte while scanning escapes;
-- preserves a first-line AWK shebang;
+- preserves accepted string and regexp contents byte-for-byte while scanning
+  escapes;
+- preserves a first-line AWK shebang and its terminating newline;
 - buffers transformed output until the complete input has been validated; and
-- fails nonzero with a diagnostic on STDERR when a string or regexp literal is
-  unterminated.
+- fails nonzero with a diagnostic on STDERR for malformed or explicitly rejected
+  non-portable literal input.
 
-The project does not claim that this first implementation is a complete AWK parser
-or that it produces the smallest possible output.  When the transformer cannot
-safely prove that a more aggressive rewrite preserves meaning, the conservative
-representation wins.
+For successful portable-AWK input, transformed source contains exactly one
+physical newline when a first-line shebang is preserved and zero physical newlines
+otherwise.  AWK newlines are not treated as generic whitespace: true statement or
+rule boundaries become semicolons, while grammar-optional newlines disappear.
+
+The project does not claim that the implementation is a complete AWK parser or
+that it produces the smallest possible byte representation.  When the transformer
+cannot safely prove that a more aggressive rewrite preserves meaning across the
+supported portability floor, it fails conservatively rather than selecting one
+implementation's interpretation.
 
 ## Usage
 
@@ -43,7 +55,9 @@ The maintained modular source is directly executable in the same way:
 awk \
   -f src/diagnostics.awk \
   -f src/output.awk \
+  -f src/context.awk \
   -f src/lexer.awk \
+  -f src/transform.awk \
   -f src/main.awk \
   < input.awk > output.awk
 ```
@@ -61,26 +75,39 @@ for each:
   documentation;
 - `dist/awk-minifier.awk` removes only project-governed Doxygen documentation
   lines; and
-- `dist/awk-minifier.min.awk` occupies the stable minified release slot.
+- `dist/awk-minifier.min.awk` contains the ordinary artifact body transformed by
+  the pinned AWK Minifier v0.1.0 release.
 
-During bootstrap, `awk-minifier.min.awk` is intentionally an exact byte-for-byte
-copy of `awk-minifier.dev.awk`.  Once a trustworthy previous AWK Minifier release
-exists, a later governed change will pin that released artifact through Bashdeps
-and use it to produce subsequent `.min.awk` artifacts.  The current release
+The v0.1.0 release is the first trusted production minifier and is synchronized by
+Bashdeps as `vendor/awk-minifier.awk`.  The generated provenance header remains
+outside the transformer input so the final minified artifact still identifies its
+version, build date, build commit, and minifier version.  The current release
 candidate is never used as its own production trust root.
+
+The `.min.awk` file representation therefore still reflects the pinned previous
+release's minification behavior until a later release advances that trust anchor.
+The current candidate's more aggressive newline behavior is verified separately by
+self-minification tests; it does not self-host the production release pipeline.
 
 ## Building and testing
 
-GNU Make is the canonical orchestration interface:
+GNU Make is the canonical orchestration interface.  Prepare repository tools
+before building:
 
 ```bash
+make deps
+make deps-check
 make build
 make check
 make test
 ```
 
-`make build` is network-free and does not prepare dependencies.  The bootstrap
-build does not require a previous AWK Minifier release.
+`make all` is the convenience lifecycle that runs dependency preparation followed
+by the build.
+
+`make build` itself is network-free and never repairs dependency state.  It now
+requires the prepared `vendor/awk-minifier.awk` dependency because steady-state
+`.min.awk` construction uses the pinned previous release.
 
 The test harness accepts an explicit interpreter:
 
@@ -91,7 +118,10 @@ make test AWK_BIN=gawk
 
 Tests cover modular source and all assembled artifacts, exact transformations,
 semantic equivalence, malformed-input failure behavior, regexp/division
-classification, continuation handling, and idempotence.
+classification, grammar-aware newline elimination, control-flow continuation,
+portable explicit continuation between tokens, rejection of non-portable
+literal-internal continuation, physical-line invariants, candidate
+self-minification, and idempotence.
 
 ## Repository dependencies
 
@@ -105,9 +135,10 @@ make deps        # may access the network and converge vendor state
 make deps-check  # offline verification; does not repair state
 ```
 
-The tool manifest includes the released `awk-doxygen` filter and `adrctl`.
-A previously released AWK Minifier will be added only when the project is ready to
-leave bootstrap minification.
+The tool manifest includes the released `awk-doxygen` filter, `adrctl`, and AWK
+Minifier v0.1.0.  The v0.1.0 ordinary release artifact is pinned by immutable
+release URL and SHA-256 digest and is used only as the previous-release production
+transformer.
 
 System packages such as `awk`, `make`, and `doxygen` are not installed by
 Bashdeps.

@@ -23,11 +23,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes busybox curl doxygen gawk graphviz make mawk
 
-      - name: Verify build is independent of dependency acquisition
+      - name: Verify build does not acquire missing dependencies
         run: |
           test ! -e vendor
-          make build
+          if make build; then
+            printf '%s\n' 'build unexpectedly succeeded without prepared minifier dependency' >&2
+            exit 1
+          fi
           test ! -e vendor
+          test ! -e dist
 
       - name: Validate maintained source
         run: make check
@@ -38,6 +42,10 @@ jobs:
           make deps-check
           test -f vendor/doxygen-awk.awk
           test -f vendor/adrctl.bash
+          test -f vendor/awk-minifier.awk
+
+      - name: Build with prepared dependencies
+        run: make build
 
       - name: Synchronize and verify shared standards
         run: |
@@ -58,20 +66,41 @@ jobs:
             test -f "${artifact}.sha256"
             (cd dist && sha256sum -c "$(basename "${artifact}").sha256")
           done
-          cmp dist/awk-minifier.dev.awk dist/awk-minifier.min.awk
+
+          grep -Fq '# Artifact: development' dist/awk-minifier.dev.awk
+          grep -Fq '# Artifact: ordinary' dist/awk-minifier.awk
+          grep -Fq '# Artifact: minified' dist/awk-minifier.min.awk
+          grep -Fq '# Minifier: AWK Minifier v0.1.0' dist/awk-minifier.min.awk
+
           if cmp -s dist/awk-minifier.dev.awk dist/awk-minifier.awk; then
             printf '%s\n' 'ordinary artifact unexpectedly equals development artifact' >&2
+            exit 1
+          fi
+          if cmp -s dist/awk-minifier.awk dist/awk-minifier.min.awk; then
+            printf '%s\n' 'minified artifact unexpectedly equals ordinary artifact' >&2
             exit 1
           fi
           if grep -q '^##' dist/awk-minifier.awk; then
             printf '%s\n' 'ordinary artifact retained Doxygen documentation lines' >&2
             exit 1
           fi
+          if grep -q '^##' dist/awk-minifier.min.awk; then
+            printf '%s\n' 'minified artifact retained Doxygen documentation lines' >&2
+            exit 1
+          fi
+
+          expected_body="${RUNNER_TEMP}/expected-minified-body.awk"
+          actual_body="${RUNNER_TEMP}/actual-minified-body.awk"
+          sed '1,/^# End generated header\.$/d' dist/awk-minifier.awk |
+            awk -f vendor/awk-minifier.awk >"${expected_body}"
+          sed '1,/^# End generated header\.$/d' dist/awk-minifier.min.awk >"${actual_body}"
+          cmp "${expected_body}" "${actual_body}"
 
       - name: Verify deterministic build output
         run: |
           mkdir -p "${RUNNER_TEMP}/first-build"
           cp dist/*.awk dist/*.awk.sha256 "${RUNNER_TEMP}/first-build/"
+          rm -rf dist
           make build
           for path in dist/*.awk dist/*.awk.sha256; do
             cmp "${RUNNER_TEMP}/first-build/$(basename "${path}")" "${path}"
@@ -97,7 +126,7 @@ jobs:
           make docs
           make deps-check
           test -f doc/adr/README.md
-          grep -Fq 'ADR-021: AWK Documentation and Portability Testing' doc/adr/README.md
+          grep -Fq 'ADR-022: Pin v0.1.0 as the Production Minification Transformer' doc/adr/README.md
           git check-ignore -q doc/adr/README.md
           test -f doc/reference/html/index.html
           git check-ignore -q doc/reference/html/index.html
@@ -108,8 +137,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Build and test with system AWK
+      - name: Prepare dependencies and test with system AWK
         run: |
-          make build
+          make deps
+          make deps-check
+          make build AWK_BIN=/usr/bin/awk
           make check AWK_BIN=/usr/bin/awk
           make test AWK_BIN=/usr/bin/awk

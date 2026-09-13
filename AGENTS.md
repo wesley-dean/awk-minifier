@@ -26,7 +26,9 @@ The Makefile owns the exact source order.  Maintained modules currently are:
 ```text
 src/diagnostics.awk
 src/output.awk
+src/context.awk
 src/lexer.awk
+src/transform.awk
 src/main.awk
 ```
 
@@ -44,9 +46,23 @@ Treat comments, strings, regexp literals, division, `/=`, continuations, and
 newline-sensitive grammar as lexical/contextual concerns.  Do not implement new
 rewrites as blind regular-expression substitutions over raw lines.
 
-Physical newlines are deliberately preserved by the first implementation.  A
-future optimization that removes or rewrites newlines is consequential behavior
-and must be justified with stronger grammar evidence and tests.
+ADR-023 governs physical newline elimination.  For successful portable-AWK input,
+transformed source contains exactly one physical newline when a first-line shebang
+is preserved and zero otherwise.  Grammar-optional newlines disappear; remaining
+statement and rule terminators become semicolons.  Explicit backslash-newline
+continuation between source tokens disappears without becoming a statement
+boundary.
+
+Backslash-newline inside a string or regexp literal is outside the accepted
+portable input contract because the supported AWK implementations do not agree on
+its observable semantics.  Reject that source with nonzero status and no partial
+STDOUT rather than normalizing it according to one implementation.
+
+Do not treat all newlines alike.  In particular, preserve structural recognition
+of `if`, `for`, ordinary `while`, function-definition headers, `do ... while`
+trailers, braces, commas, logical continuations, `do`, and `else`.  Any change to
+newline classification must add both focused byte-level evidence and semantic
+comparisons.
 
 Slash interpretation is contextual.  A slash is not inherently a regexp delimiter
 or a division operator.  Any change to slash classification must add focused
@@ -67,19 +83,31 @@ dist/awk-minifier.min.awk
 
 with adjacent `.sha256` companions.
 
-During bootstrap, `.min.awk` must be byte-for-byte identical to `.dev.awk`.  Do
-not use the current candidate to create its own production minified artifact.
-After a trustworthy release exists, a separately governed change may pin that
-release through Bashdeps and use it as the transformer for later releases.
+AWK Minifier v0.1.0 is the pinned previous-release production transformer.
+Bashdeps synchronizes it as `vendor/awk-minifier.awk`, and the build applies it to
+the body of the current ordinary artifact to create `.min.awk`.  The generated
+provenance header is kept outside the transformer input and regenerated for the
+minified artifact so version, build date, build commit, and minifier identity
+remain inspectable.
+
+The current candidate must never be used to create its own production `.min.awk`
+release artifact.  Candidate self-minification is permitted only as test evidence,
+including the ADR-023 assertion that the maintained development artifact collapses
+to a shebang plus one program line.
+
+Do not silently fall back to copying `.dev.awk`, to self-minification, or to
+another transformer when the pinned dependency is missing or fails.
 
 `make build` must remain network-free and must not invoke dependency or standards
-synchronization implicitly.
+synchronization implicitly.  Steady-state builds require prepared
+`vendor/awk-minifier.awk` state; use `make deps` or `make all` before `make build`.
 
 ## Dependencies and standards
 
 Make directly bootstraps only `vendor/bashdeps.bash`, using the pinned version and
 SHA-256 digest in the Makefile.  Other repository tools belong in
-`dependencies.txt`.
+`dependencies.txt`, including the pinned previous-release AWK Minifier used by the
+production build.
 
 Network boundaries:
 
@@ -106,11 +134,21 @@ Every public behavior suite should cover:
 
 Add regression fixtures for every confirmed semantic bug.  Prefer semantic
 comparisons in addition to exact golden text where the exact byte representation
-is not itself the contract.  Malformed-input tests must verify both nonzero status
-and absence of partial STDOUT.
+is not itself the contract.  Malformed or rejected non-portable-input tests must
+verify both nonzero status and absence of partial STDOUT.
 
 Portability testing should include at least GNU awk and mawk, with BusyBox awk and
 a BSD/macOS AWK implementation where practical.
+
+Newline tests must include physical-line counts, statement and rule separation,
+control headers, nested conditionals, ordinary and `do ... while` loops,
+function-definition line breaks, portable explicit continuation between tokens,
+rejection of literal-internal backslash-newline, comments around optional newlines,
+idempotence, and candidate self-minification.
+
+Build-pipeline tests must also verify the previous-release lineage: the minified
+artifact body must match the output of the pinned `vendor/awk-minifier.awk` when
+that transformer receives the ordinary artifact body.
 
 ## Documentation
 
