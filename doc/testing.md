@@ -98,10 +98,15 @@ Tests must keep those two concerns distinct.
 
 ## Portability
 
-CI exercises the suite under GNU awk, mawk, BusyBox awk, and the macOS system AWK
-where practical.  `AWK_BIN` is an executable path or command name, not a shell
+CI exercises the suite under GNU awk, mawk, BusyBox awk, and original awk on the
+Ubuntu runner.  `AWK_BIN` is an executable path or command name, not a shell
 fragment; wrappers such as BusyBox should therefore be exposed through an `awk`
 symlink when needed.
+
+A BSD/macOS AWK implementation remains useful supplemental evidence where a runner
+or local system makes that practical, but it is not a required hosted CI gate.
+This preserves diverse interpreter coverage without making release progress depend
+on scarce macOS runner capacity.
 
 A portability failure is a product failure unless repository governance explicitly
 allows the implementation-specific behavior.  When supported implementations
