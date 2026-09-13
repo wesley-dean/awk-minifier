@@ -21,7 +21,7 @@ jobs:
       - name: Install system tools
         run: |
           sudo apt-get update
-          sudo apt-get install --yes busybox curl doxygen gawk graphviz make mawk
+          sudo apt-get install --yes busybox curl doxygen gawk graphviz make mawk original-awk
 
       - name: Verify build does not acquire missing dependencies
         run: |
@@ -115,6 +115,9 @@ jobs:
       - name: Test mawk
         run: make test AWK_BIN=mawk
 
+      - name: Test original awk
+        run: make test AWK_BIN=original-awk
+
       - name: Test BusyBox awk
         run: |
           mkdir -p "${RUNNER_TEMP}/busybox-awk"
@@ -130,17 +133,3 @@ jobs:
           git check-ignore -q doc/adr/README.md
           test -f doc/reference/html/index.html
           git check-ignore -q doc/reference/html/index.html
-
-  macos:
-    name: macOS AWK
-    runs-on: macos-15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Prepare dependencies and test with system AWK
-        run: |
-          make deps
-          make deps-check
-          make build AWK_BIN=/usr/bin/awk
-          make check AWK_BIN=/usr/bin/awk
-          make test AWK_BIN=/usr/bin/awk

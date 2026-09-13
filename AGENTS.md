@@ -137,8 +137,9 @@ comparisons in addition to exact golden text where the exact byte representation
 is not itself the contract.  Malformed or rejected non-portable-input tests must
 verify both nonzero status and absence of partial STDOUT.
 
-Portability testing should include at least GNU awk and mawk, with BusyBox awk and
-a BSD/macOS AWK implementation where practical.
+Portability testing should include GNU awk, mawk, BusyBox awk, and original awk.
+A BSD/macOS AWK implementation remains useful supplemental evidence where a runner
+or local system makes that practical, but it is not required as a hosted CI gate.
 
 Newline tests must include physical-line counts, statement and rule separation,
 control headers, nested conditionals, ordinary and `do ... while` loops,
