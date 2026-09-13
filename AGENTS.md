@@ -98,29 +98,38 @@ to a shebang plus one program line.
 Do not silently fall back to copying `.dev.awk`, to self-minification, or to
 another transformer when the pinned dependency is missing or fails.
 
-`make build` must remain network-free and must not invoke dependency or standards
-synchronization implicitly.  Steady-state builds require prepared
+`make build` must remain network-free and must not invoke dependency acquisition or
+standards updates implicitly.  Steady-state builds require prepared
 `vendor/awk-minifier.awk` state; use `make deps` or `make all` before `make build`.
 
 ## Dependencies and standards
 
 Make directly bootstraps only `vendor/bashdeps.bash`, using the pinned version and
-SHA-256 digest in the Makefile.  Other repository tools belong in
+SHA-256 digest in the Makefile.  Other executable repository tools belong in
 `dependencies.txt`, including the pinned previous-release AWK Minifier used by the
 production build.
 
 Network boundaries:
 
-- `make deps` may access the network and repair tool dependency state;
+- `make deps` may access the network and repair executable tool dependency state;
 - `make deps-check` is offline and non-repairing;
-- `make standards` may access the network and synchronize shared standards;
-- `make standards-check` is offline and non-repairing;
-- `make build`, `make test`, and `make docs` do not hide dependency acquisition.
+- the manually dispatched `Update Coding Standards` workflow may access the
+  network and refresh shared standards;
+- `make build`, `make test`, and `make docs` do not hide dependency acquisition or
+  standards refreshes.
 
-Shared standards come from `wesley-dean/coding_standards` through
-`dependencies-standards.txt`.  Do not edit synchronized copies under
-`doc/standards/`; change the upstream standard, update the immutable pin/digest,
-and resynchronize instead.
+Shared standards come from released `wesley-dean/coding_standards` archives and
+are materialized beneath `doc/standards/` according to ADR-025.  The intended
+steady state is that `.codingstandardrc` and `doc/standards/` are tracked, so a
+coding agent receives the governing standards in the ordinary checkout and does
+not need network access before work begins.
+
+Do not edit synchronized copies under `doc/standards/`; change the upstream
+standard, release it, and intentionally update this repository instead.
+
+The standards-update workflow treats `.codingstandardrc` as data rather than shell
+code.  Do not replace its strict parsing with `source`, `eval`, or equivalent
+execution.
 
 ## Tests
 
