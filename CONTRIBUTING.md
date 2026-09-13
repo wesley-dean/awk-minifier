@@ -36,14 +36,18 @@ make test AWK_BIN=mawk
 make test AWK_BIN=gawk
 ```
 
-Shared standards use their own lifecycle:
+Shared coding standards are maintained separately from executable repository
+tools.  The intended steady state is that `.codingstandardrc` and the complete
+`doc/standards/` snapshot are tracked in the repository.  Standards updates are
+performed through the manually dispatched `Update Coding Standards` GitHub
+Actions workflow governed by ADR-025 rather than through Make or bashdeps.
 
-```bash
-make standards
-make standards-check
-```
+Do not edit files beneath `doc/standards/` locally.  Shared changes belong in
+`wesley-dean/coding_standards` and are adopted here through a released standards
+version.
 
-Do not make `build`, `test`, or `docs` silently acquire dependencies.
+Do not make `build`, `test`, or `docs` silently acquire dependencies or refresh
+shared standards.
 
 ## Source documentation
 
