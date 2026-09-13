@@ -3,6 +3,7 @@ set -eu
 
 AWK_BIN=${AWK_BIN:-awk}
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+FIXTURE_CATALOG="$ROOT/tests/fixtures.txt"
 TMP=${TMPDIR:-/tmp}/awk-minifier-tests.$$
 trap 'rm -rf "$TMP"' EXIT HUP INT TERM
 mkdir -p "$TMP"
@@ -22,6 +23,13 @@ announce_subtest() {
   printf '  - %s\n' "$1"
 }
 
+print_fixture_catalog() {
+  [ -r "$FIXTURE_CATALOG" ] || fail 'missing tests/fixtures.txt fixture catalog'
+  printf '\n'
+  cat "$FIXTURE_CATALOG"
+  printf '\n'
+}
+
 run_modular() {
   # shellcheck disable=SC2086
   $MODULAR
@@ -32,6 +40,7 @@ newline_count() {
 }
 
 printf 'AWK Minifier test suite (%s)\n' "$AWK_BIN"
+print_fixture_catalog
 
 announce 'basic transformation and shebang physical-line invariant'
 cat >"$TMP/basic.awk" <<'CASE'
