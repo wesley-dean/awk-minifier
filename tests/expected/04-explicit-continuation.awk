@@ -1,0 +1,1 @@
+BEGIN {value = 1 + 2;text = "a" "b";print value, text;}

@@ -1,0 +1,1 @@
+BEGIN {print "quoted # text with \"escape\"";}

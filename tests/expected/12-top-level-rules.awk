@@ -1,0 +1,1 @@
+/foo#bar/ { print $1 };/bar/;END { print "done" }

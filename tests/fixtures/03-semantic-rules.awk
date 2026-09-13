@@ -1,0 +1,3 @@
+BEGIN { FS="," }
+$1 ~ /a#[0-9]+/ { total += $2 / 2 }
+END { print total }
