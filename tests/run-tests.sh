@@ -118,6 +118,7 @@ BEGIN {
   do {
     while (x < 7)
       x++
+    x++
   } while (x < 8)
   if (x == 8) {
     if (1) {
