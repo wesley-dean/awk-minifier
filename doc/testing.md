@@ -31,6 +31,11 @@ exact output and semantic equivalence where practical.  Important classes includ
 - regexp pattern rules and match operators;
 - horizontal whitespace and indentation;
 - physical newlines and backslash continuations;
+- control-header newlines after `if`, `for`, and ordinary `while`;
+- `do ... while` trailers, including nested loops;
+- function-definition header line breaks;
+- grammar-optional newlines after `{`, comma, `&&`, `||`, `do`, and `else`;
+- top-level rule separation after physical newline removal;
 - malformed strings and regexp literals;
 - first-line shebang handling; and
 - idempotence of the transformation.
@@ -39,13 +44,42 @@ Malformed-input tests must assert both a nonzero exit status and empty STDOUT.
 This protects the buffered-output contract: an error must not expose a partial
 transformation that a caller could mistake for success.
 
+## Physical-line invariant
+
+ADR-023 makes output line count part of the observable representation contract.
+Successful transformed source must contain:
+
+- exactly one physical newline when a first-line shebang is preserved; or
+- zero physical newlines when there is no shebang.
+
+Tests should count newline bytes directly rather than infer the property from
+`wc -l`, because a non-newline-terminated one-line body is intentional output.
+The final source newline is discarded when EOF already terminates the final
+statement or rule.
+
+A significant source newline that remains grammatically necessary must become a
+semicolon.  Grammar-optional newlines disappear.  Tests should therefore assert
+both byte-level shape and program behavior for control flow, rule boundaries, and
+continuations.
+
 ## Semantic comparisons
 
-For valid fixtures whose exact output bytes are not the contract, execute both the
-original and transformed AWK program against the same input and compare their
-observable output.  This is especially important for slash classification and
-newline-sensitive syntax, where a visually plausible transformation can still
+For valid fixtures whose exact output bytes are not the whole contract, execute
+both the original and transformed AWK program against the same input and compare
+their observable output.  This is especially important for slash classification
+and newline-sensitive syntax, where a visually plausible transformation can still
 change meaning.
+
+## Candidate self-minification
+
+The current modular transformer may minify the current development artifact as a
+test-only exercise.  This proves that the maintained implementation itself
+satisfies ADR-023's shebang-plus-one-program-line target and that the resulting
+source remains executable AWK.
+
+Candidate self-minification is not production build provenance.  ADR-022 still
+requires production `.min.awk` construction to use the pinned previous release.
+Tests must keep those two concerns distinct.
 
 ## Portability
 
@@ -76,6 +110,13 @@ The minified artifact retains a build-owned provenance header outside the
 transformer input.  CI therefore compares artifact bodies after the
 `# End generated header.` marker rather than comparing the complete minified file
 to the raw transformer output.
+
+The production `.min.awk` file may still contain many physical source lines while
+v0.1.0 remains the pinned production transformer.  That representation is not a
+failure of ADR-023: the release artifact contains the current transformer code,
+and its behavior must satisfy the new output-line contract when executed.  A later
+release can advance the production trust anchor after the improved transformer is
+itself released and trusted.
 
 Repeated builds with the same source, version, commit, commit-derived build date,
 prepared dependency bytes, and AWK implementation must produce identical artifact

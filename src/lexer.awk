@@ -1,8 +1,17 @@
 ## @file src/lexer.awk
-## @brief Conservative lexical transformer for portable AWK source.
+## @brief Provides lexical scanners for portable AWK source.
+## @details
+## This module recognizes identifier boundaries, operand-sensitive keywords,
+## string literals, regexp literals, and comments.  Literal scanners preserve
+## literal bytes except for lexical backslash-newline continuation, which ADR-023
+## requires to disappear before output.  Slash classification itself remains
+## contextual and is coordinated by the transformation loop.
 
 ## @fn is_identifier_start(ch)
 ## @brief Reports whether a character may begin an AWK identifier.
+## @details
+## The recognizer intentionally uses the portable ASCII identifier subset already
+## established by the project rather than locale-sensitive character classes.
 ## @param ch One-character string.
 ## @par STDIN
 ## Nothing is read directly from STDIN.
@@ -17,6 +26,9 @@ function is_identifier_start(ch) {
 
 ## @fn is_identifier_part(ch)
 ## @brief Reports whether a character may continue an AWK identifier.
+## @details
+## Digits are accepted after the first identifier character while the same
+## portable ASCII naming policy used by `is_identifier_start` is preserved.
 ## @param ch One-character string.
 ## @par STDIN
 ## Nothing is read directly from STDIN.
@@ -32,9 +44,10 @@ function is_identifier_part(ch) {
 ## @fn keyword_expects_operand(word)
 ## @brief Reports whether a keyword is normally followed by an expression.
 ## @details
-## The result is used only to distinguish a regexp literal delimiter from a
-## division operator.  Keywords that introduce or resume an expression return
-## true; ordinary identifiers return false.
+## The result is used to distinguish regexp literal delimiters from division
+## operators.  Keywords that introduce or resume an expression return true;
+## ordinary identifiers return false.  This helper is contextual recognition, not
+## a complete AWK grammar classifier.
 ## @param word Identifier token.
 ## @par STDIN
 ## Nothing is read directly from STDIN.
@@ -52,10 +65,18 @@ function keyword_expects_operand(word) {
 
 ## @fn scan_string(pos, length_source)
 ## @brief Copies one double-quoted string literal without rewriting its content.
+## @details
+## The function consumes the global buffered `source`, writes transformed bytes to
+## the global output buffer through `emit`, and tracks escapes until the closing
+## quote.  Backslash-newline continuation is removed before literal bytes are
+## copied so a continued literal satisfies ADR-023's physical-line invariant.  An
+## unescaped newline or EOF before the closing quote records a transformation
+## failure through `fail`.
 ## @param pos Position of the opening quote.
 ## @param length_source Total source length.
 ## @local i Current source position.
 ## @local ch Current source character.
+## @local nextch Following source character.
 ## @local escaped Whether the previous character was a backslash.
 ## @par STDIN
 ## Nothing is read directly from STDIN.
@@ -65,7 +86,7 @@ function keyword_expects_operand(word) {
 ## Nothing is written immediately; malformed input is recorded through `fail`.
 ## @returns Position immediately after the closing quote, or after the failing
 ## position when the string is malformed.
-function scan_string(pos, length_source,    i, ch, escaped) {
+function scan_string(pos, length_source,    i, ch, nextch, escaped) {
   emit_pending_space()
   emit("\"")
   line_has_content = 1
@@ -73,10 +94,19 @@ function scan_string(pos, length_source,    i, ch, escaped) {
 
   for (i = pos + 1; i <= length_source; i++) {
     ch = substr(source, i, 1)
+    nextch = substr(source, i + 1, 1)
+
+    if (ch == "\\" && nextch == "\n") {
+      i++
+      escaped = 0
+      continue
+    }
+
     if (ch == "\n" && !escaped) {
       fail("unterminated string literal")
       return i
     }
+
     emit(ch)
     if (escaped) {
       escaped = 0
@@ -84,6 +114,8 @@ function scan_string(pos, length_source,    i, ch, escaped) {
       escaped = 1
     } else if (ch == "\"") {
       expect_operand = 0
+      newline_optional_after = 0
+      newline_space_after = 0
       return i + 1
     }
   }
@@ -94,10 +126,18 @@ function scan_string(pos, length_source,    i, ch, escaped) {
 
 ## @fn scan_regexp(pos, length_source)
 ## @brief Copies one regexp literal without rewriting its content.
+## @details
+## The function consumes the global buffered `source`, writes transformed bytes to
+## the global output buffer through `emit`, and tracks escapes until the closing
+## slash.  Backslash-newline continuation is removed before regexp bytes are
+## copied so a continued regexp satisfies ADR-023's physical-line invariant.  An
+## unescaped newline or EOF before the closing slash records a transformation
+## failure through `fail`.
 ## @param pos Position of the opening slash.
 ## @param length_source Total source length.
 ## @local i Current source position.
 ## @local ch Current source character.
+## @local nextch Following source character.
 ## @local escaped Whether the previous character was a backslash.
 ## @par STDIN
 ## Nothing is read directly from STDIN.
@@ -107,7 +147,7 @@ function scan_string(pos, length_source,    i, ch, escaped) {
 ## Nothing is written immediately; malformed input is recorded through `fail`.
 ## @returns Position immediately after the closing slash, or after the failing
 ## position when the regexp is malformed.
-function scan_regexp(pos, length_source,    i, ch, escaped) {
+function scan_regexp(pos, length_source,    i, ch, nextch, escaped) {
   emit_pending_space()
   emit("/")
   line_has_content = 1
@@ -115,10 +155,19 @@ function scan_regexp(pos, length_source,    i, ch, escaped) {
 
   for (i = pos + 1; i <= length_source; i++) {
     ch = substr(source, i, 1)
+    nextch = substr(source, i + 1, 1)
+
+    if (ch == "\\" && nextch == "\n") {
+      i++
+      escaped = 0
+      continue
+    }
+
     if (ch == "\n" && !escaped) {
       fail("unterminated regexp literal")
       return i
     }
+
     emit(ch)
     if (escaped) {
       escaped = 0
@@ -126,6 +175,8 @@ function scan_regexp(pos, length_source,    i, ch, escaped) {
       escaped = 1
     } else if (ch == "/") {
       expect_operand = 0
+      newline_optional_after = 0
+      newline_space_after = 0
       return i + 1
     }
   }
@@ -135,14 +186,19 @@ function scan_regexp(pos, length_source,    i, ch, escaped) {
 }
 
 ## @fn skip_comment(pos, length_source)
-## @brief Skips a comment body while preserving its terminating newline.
+## @brief Skips a comment body while leaving its terminating newline to context.
+## @details
+## The newline is not consumed because the transformation loop must decide whether
+## that physical line ended a statement, ended a rule, or occurred in a grammar
+## position where the newline is optional.  Pending horizontal space before the
+## comment is discarded.
 ## @param pos Position of the comment marker.
 ## @param length_source Total source length.
 ## @local i Current source position.
 ## @par STDIN
 ## Nothing is read directly from STDIN.
 ## @par STDOUT
-## Nothing is written immediately.
+## Nothing is written to STDOUT.
 ## @par STDERR
 ## Nothing is written to STDERR.
 ## @returns Position of the newline ending the comment, or one past input.
@@ -154,192 +210,4 @@ function skip_comment(pos, length_source,    i) {
     }
   }
   return length_source + 1
-}
-
-## @fn transform_source()
-## @brief Transforms the buffered AWK source conservatively.
-## @details
-## The transformer removes comments outside strings and regexp literals, removes
-## indentation and trailing horizontal whitespace, and collapses other horizontal
-## whitespace runs to one ASCII space.  Physical newlines are preserved.  Slash
-## interpretation uses expression context so regexp constants are not confused
-## with division operators.
-## @local i Current source position.
-## @local n Total source length.
-## @local ch Current source character.
-## @local nextch Following source character.
-## @local start Start position of the current token.
-## @local token Current identifier token.
-## @local continued Whether the current physical newline follows a continuation.
-## @par STDIN
-## Source has already been buffered from STDIN by the ordinary input rule.
-## @par STDOUT
-## Nothing is written immediately; transformed bytes are buffered.
-## @par STDERR
-## Nothing is written immediately; malformed input is recorded through `fail`.
-## @returns Nothing.
-function transform_source(    i, n, ch, nextch, start, token, continued) {
-  n = length(source)
-  expect_operand = 1
-  line_has_content = 0
-  pending_space = 0
-  last_normal_char = ""
-
-  i = 1
-  while (i <= n && !failed) {
-    ch = substr(source, i, 1)
-    nextch = substr(source, i + 1, 1)
-
-    if (i == 1 && ch == "#" && nextch == "!") {
-      while (i <= n && substr(source, i, 1) != "\n") {
-        emit(substr(source, i, 1))
-        i++
-      }
-      line_has_content = 1
-      if (i <= n) {
-        emit_newline()
-        i++
-      }
-      expect_operand = 1
-      last_normal_char = ""
-      continue
-    }
-
-    if (ch == " " || ch == "\t" || ch == "\r" || ch == "\f" || ch == "\v") {
-      pending_space = 1
-      i++
-      continue
-    }
-
-    if (ch == "\n") {
-      continued = (last_normal_char == "\\")
-      emit_newline()
-      if (!continued) {
-        expect_operand = 1
-      }
-      last_normal_char = ""
-      i++
-      continue
-    }
-
-    if (ch == "#") {
-      i = skip_comment(i, n)
-      continue
-    }
-
-    if (ch == "\"") {
-      i = scan_string(i, n)
-      last_normal_char = "\""
-      continue
-    }
-
-    if (is_identifier_start(ch)) {
-      start = i
-      i++
-      while (i <= n && is_identifier_part(substr(source, i, 1))) {
-        i++
-      }
-      token = substr(source, start, i - start)
-      emit_pending_space()
-      emit(token)
-      line_has_content = 1
-      expect_operand = keyword_expects_operand(token)
-      last_normal_char = substr(token, length(token), 1)
-      continue
-    }
-
-    if (ch ~ /[0-9]/ || (ch == "." && nextch ~ /[0-9]/)) {
-      start = i
-      i++
-      while (i <= n && substr(source, i, 1) ~ /[A-Za-z0-9_.]/) {
-        i++
-      }
-      emit_pending_space()
-      token = substr(source, start, i - start)
-      emit(token)
-      line_has_content = 1
-      expect_operand = 0
-      last_normal_char = substr(token, length(token), 1)
-      continue
-    }
-
-    if (ch == "/") {
-      if (nextch == "=") {
-        emit_pending_space()
-        emit("/=")
-        line_has_content = 1
-        expect_operand = 1
-        last_normal_char = "="
-        i += 2
-        continue
-      }
-      if (expect_operand) {
-        i = scan_regexp(i, n)
-        last_normal_char = "/"
-        continue
-      }
-      emit_pending_space()
-      emit("/")
-      line_has_content = 1
-      expect_operand = 1
-      last_normal_char = "/"
-      i++
-      continue
-    }
-
-    emit_pending_space()
-
-    if ((ch == "+" || ch == "-") && nextch == ch) {
-      emit(ch ch)
-      line_has_content = 1
-      if (expect_operand) {
-        expect_operand = 1
-      } else {
-        expect_operand = 0
-      }
-      last_normal_char = ch
-      i += 2
-      continue
-    }
-
-    if ((ch == "=" || ch == "!" || ch == "<" || ch == ">" ||
-         ch == "&" || ch == "|") && nextch == "=") {
-      emit(ch nextch)
-      line_has_content = 1
-      expect_operand = 1
-      last_normal_char = nextch
-      i += 2
-      continue
-    }
-
-    if ((ch == "&" && nextch == "&") || (ch == "|" && nextch == "|") ||
-        (ch == "!" && nextch == "~") || (ch == "*" && nextch == "*")) {
-      emit(ch nextch)
-      line_has_content = 1
-      expect_operand = 1
-      last_normal_char = nextch
-      i += 2
-      continue
-    }
-
-    emit(ch)
-    line_has_content = 1
-    last_normal_char = ch
-
-    if (ch == ")" || ch == "]") {
-      expect_operand = 0
-    } else if (ch == "}") {
-      expect_operand = 0
-    } else if (ch == "(" || ch == "[" || ch == "{" || ch == "," ||
-               ch == ";" || ch == "?" || ch == ":" || ch == "=" ||
-               ch == "+" || ch == "-" || ch == "*" || ch == "%" ||
-               ch == "^" || ch == "~" || ch == "!" || ch == "<" ||
-               ch == ">" || ch == "$" || ch == "|") {
-      expect_operand = 1
-    } else {
-      expect_operand = 0
-    }
-
-    i++
-  }
 }
