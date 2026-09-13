@@ -4,7 +4,12 @@ Date: 2026-09-12
 
 ## Status
 
-Accepted
+Accepted, partially superseded by ADR-025.
+
+ADR-025 supersedes this ADR only for shared coding-standards acquisition,
+verification, materialization, and lifecycle commands.  This ADR remains governing
+for bashdeps-managed executable repository tools and their explicit network and
+offline-verification boundaries.
 
 ## Context
 
@@ -59,53 +64,42 @@ current maintained source path actually requires them.
 
 ### Standards dependencies
 
-Shared standards SHALL be declared separately in
-`dependencies-standards.txt`.  They SHALL be pinned to immutable raw GitHub URLs
-and committed SHA-256 digests from `wesley-dean/coding_standards`.
+The standards-management decision in this section is historical and is
+superseded by ADR-025.
 
-`make standards` MAY access the network and SHALL use bashdeps `sync` with:
+This ADR originally required shared standards to be declared separately in
+`dependencies-standards.txt`, synchronized by bashdeps through `make standards`,
+verified by `make standards-check`, and materialized beneath `doc/standards/`.
+ADR-025 replaces that mechanism with a tracked `.codingstandardrc`, a manually
+dispatched GitHub Actions updater, one released standards archive, and a committed
+`doc/standards/` snapshot.
 
-```text
---dest-root doc/standards
-```
+Imported standards remain externally managed copies.  They SHALL NOT be edited
+locally; changes belong in `coding_standards`, followed by an intentional released
+update in this repository.
 
-`make standards-check` SHALL use bashdeps `verify` with the same destination root,
-remain offline/non-repairing, and fail when tracked imported standards differ from
-the pinned upstream bytes.
-
-Upstream `standards/` files SHALL be mapped beneath `doc/standards/` while
-preserving their relative hierarchy.  Upstream `examples/` files SHALL be mapped
-beneath `doc/standards/examples/` while preserving their relative hierarchy.
-
-Imported standards and examples are synchronized copies.  They SHALL NOT be
-edited locally; changes belong in `coding_standards`, followed by an intentional
-pin update and synchronization here.
-
-Ordinary `build`, `test`, and `docs` targets SHALL NOT invoke `make standards` or
-silently refresh normative documentation.  The `all` lifecycle MAY prepare tool
-dependencies before build, matching Bootstrap, but standards remain an explicit
-separate convergence action.
+Ordinary `build`, `test`, and `docs` targets SHALL NOT invoke standards acquisition
+or silently refresh normative documentation.
 
 ## Promises
 
-1. bashdeps is the only dependency manager Make bootstraps directly.
+1. bashdeps is the only executable repository dependency manager Make bootstraps
+   directly.
 2. Tool convergence is explicit through `make deps`.
-3. Standards convergence is explicit through `make standards`.
-4. `deps-check` and `standards-check` are offline and non-repairing.
-5. Shared standards preserve upstream directory structure under
-   `doc/standards/`.
-6. Imported standards are not forked through local edits.
-7. Build and documentation targets consume prepared state rather than hiding
+3. `deps-check` is offline and non-repairing.
+4. Imported standards are not forked through local edits.
+5. Build and documentation targets consume prepared state rather than hiding
    network acquisition.
+6. Shared-standards acquisition is governed by ADR-025 rather than by this ADR's
+   historical second-manifest design.
 
 ## Non-Promises
 
 1. The repository does not install operating-system packages.
 2. Pinning and digests do not establish that dependency behavior is safe.
-3. Empty upstream example directories are not promised locally because Git does
-   not preserve empty directories.
-4. Running `make build` on an unprepared checkout does not promise to acquire
-   missing tools.
+3. Running `make build` on an unprepared checkout does not promise to acquire
+   missing executable tools.
+4. This ADR no longer defines the active standards-update mechanism.
 
 ## Considered Alternatives
 
@@ -116,13 +110,16 @@ logic already centralized in bashdeps.
 
 ### Put Standards in dependencies.txt
 
-Rejected because standards use a different destination root and should not be
-silently refreshed as part of ordinary tool preparation.
+Rejected because standards use a different destination and lifecycle from
+executable tools.  ADR-025 later supersedes the original separate-manifest answer
+with a GitHub Actions release-archive workflow.
 
 ### Vendor Hand-Maintained Copies of Standards
 
 Rejected because local edits would create ambiguous authority and drift from the
-standards repository.
+standards repository.  ADR-025 preserves this concern by treating committed
+`doc/standards/` files as externally managed snapshots rather than locally forked
+standards.
 
 ### Track Mutable main URLs Without Digests
 
@@ -132,19 +129,15 @@ bytes.
 ### Make build Run deps or standards
 
 Rejected because build should remain an offline consumer of prepared state.  The
-higher-level `all` target can explicitly compose lifecycle steps without changing
-the meaning of `build` itself.
+higher-level `all` target can explicitly compose executable dependency preparation
+without changing the meaning of `build` itself.  ADR-025 removes standards
+synchronization from Make entirely.
 
 ## Consequences
 
-The Makefile gains the Bootstrap-style bashdeps bootstrap and two explicit
-manifest lifecycles.  The repository carries synchronized standard files as
-reviewable documentation while retaining a machine-verifiable statement of their
-upstream bytes.
-
-When `coding_standards` adds or changes a required document, this repository must
-intentionally update the immutable URL/digest pin and resynchronize.  Missing
-upstream standards cannot be fabricated locally to satisfy the manifest.
+The Makefile retains the Bootstrap-style bashdeps bootstrap for executable tools.
+The original second-manifest standards lifecycle is no longer active; ADR-025 owns
+that concern.
 
 ## Superseded Decisions
 
@@ -153,8 +146,9 @@ by this product.
 
 This ADR refines ADR-005 and ADR-015.  Their dependency-boundary and attack-surface
 principles remain governing; this ADR replaces template-specific dependency
-choices with AWK Minifier's actual tools and separates normative standards into a
-second manifest.
+choices with AWK Minifier's actual executable tools.
+
+ADR-025 supersedes this ADR's standards-specific requirements.
 
 ## Related Decisions
 
@@ -164,3 +158,4 @@ second manifest.
 - ADR-015: Dependencies as Explicit Attack Surface
 - ADR-017: Generate ADR Navigation Ephemerally
 - ADR-019: Release Artifacts and Bootstrap Minification
+- ADR-025: Manage Shared Coding Standards Through GitHub Releases
