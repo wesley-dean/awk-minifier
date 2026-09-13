@@ -72,19 +72,34 @@ run_modular <"$TMP/continuation.awk" >"$TMP/continuation.min.awk"
 cmp -s "$TMP/continuation.original.out" "$TMP/continuation.out" || fail 'continued expression'
 grep -Fq 'value = 1 + 2' "$TMP/continuation.min.awk" || fail 'explicit continuation removal'
 
-cat >"$TMP/literal-continuation.awk" <<'CASE'
+cat >"$TMP/nonportable-string-continuation.awk" <<'CASE'
 BEGIN {
   text = "a\
 b"
-  if (text ~ /a\
-b/) print text
+  print text
 }
 CASE
-run_modular <"$TMP/literal-continuation.awk" >"$TMP/literal-continuation.min.awk"
-"$AWK_BIN" -f "$TMP/literal-continuation.awk" </dev/null >"$TMP/literal-continuation.original.out"
-"$AWK_BIN" -f "$TMP/literal-continuation.min.awk" </dev/null >"$TMP/literal-continuation.out"
-cmp -s "$TMP/literal-continuation.original.out" "$TMP/literal-continuation.out" || fail 'literal continuation semantics'
-[ "$(newline_count "$TMP/literal-continuation.min.awk")" -eq 0 ] || fail 'literal continuation retained newline'
+if run_modular <"$TMP/nonportable-string-continuation.awk" \
+    >"$TMP/nonportable-string.stdout" 2>"$TMP/nonportable-string.stderr"; then
+  fail 'backslash-newline inside string should fail portability check'
+fi
+[ ! -s "$TMP/nonportable-string.stdout" ] || fail 'non-portable string continuation published partial stdout'
+grep -Fq 'backslash-newline inside string literal is not portable' \
+  "$TMP/nonportable-string.stderr" || fail 'missing non-portable string continuation diagnostic'
+
+cat >"$TMP/nonportable-regexp-continuation.awk" <<'CASE'
+BEGIN {
+  if ("ab" ~ /a\
+b/) print "match"
+}
+CASE
+if run_modular <"$TMP/nonportable-regexp-continuation.awk" \
+    >"$TMP/nonportable-regexp.stdout" 2>"$TMP/nonportable-regexp.stderr"; then
+  fail 'backslash-newline inside regexp should fail portability check'
+fi
+[ ! -s "$TMP/nonportable-regexp.stdout" ] || fail 'non-portable regexp continuation published partial stdout'
+grep -Fq 'backslash-newline inside regexp literal is not portable' \
+  "$TMP/nonportable-regexp.stderr" || fail 'missing non-portable regexp continuation diagnostic'
 
 cat >"$TMP/control.awk" <<'CASE'
 BEGIN {
