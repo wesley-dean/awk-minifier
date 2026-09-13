@@ -6,8 +6,8 @@ AWK Minifier is a conservative AWK source-to-source transformer.  Maintained
 product code is portable AWK; Bash is repository orchestration only.
 
 Before changing behavior, read `README.md`, `doc/decisions.md`, the applicable
-ADRs under `doc/adr/`, and synchronized standards under `doc/standards/` when they
-are present.  Accepted ADRs are governance, not suggestions.
+ADRs under `doc/adr/`, and the committed standards under `doc/standards/`.
+Accepted ADRs are governance, not suggestions.
 
 ## Product contract
 
@@ -36,7 +36,7 @@ The modular source must remain directly executable with repeated `awk -f`
 arguments in that order.  Do not replace explicit ordering with filesystem glob
 ordering or runtime plugin discovery.
 
-Maintained AWK source follows the synchronized AWK documentation standard from
+Maintained AWK source follows the committed AWK documentation standard from
 `coding_standards`.  Use `##` Doxygen blocks for maintained interfaces and
 ordinary `#` comments for narrow implementation notes.
 
@@ -112,24 +112,23 @@ production build.
 Network boundaries:
 
 - `make deps` may access the network and repair executable tool dependency state;
-- `make deps-check` is offline and non-repairing;
-- the manually dispatched `Update Coding Standards` workflow may access the
-  network and refresh shared standards;
-- `make build`, `make test`, and `make docs` do not hide dependency acquisition or
-  standards refreshes.
+- `make deps-check` is offline and non-repairing; and
+- `make build`, `make test`, and `make docs` do not hide dependency acquisition.
 
-Shared standards come from released `wesley-dean/coding_standards` archives and
-are materialized beneath `doc/standards/` according to ADR-025.  The intended
-steady state is that `.codingstandardrc` and `doc/standards/` are tracked, so a
-coding agent receives the governing standards in the ordinary checkout and does
-not need network access before work begins.
+The complete shared standards snapshot from `wesley-dean/coding_standards` is
+committed beneath `doc/standards/`.  AWK Minifier contains no standards-fetching
+workflow, Make target, dependency manifest, or dedicated standards configuration.
+Agents should use the committed files directly.
 
-Do not edit synchronized copies under `doc/standards/`; change the upstream
-standard, release it, and intentionally update this repository instead.
+For this repository, the general standards and AWK standards apply.  Repository,
+Markdown, ADR, or other shared standards also apply when their subject matter is
+present in the committed library and relevant to the change.  Language-specific
+standards for unrelated implementation languages do not become applicable merely
+because the complete library is present.
 
-The standards-update workflow treats `.codingstandardrc` as data rather than shell
-code.  Do not replace its strict parsing with `source`, `eval`, or equivalent
-execution.
+Do not edit imported shared standards locally.  Change the canonical standard in
+`wesley-dean/coding_standards`, then adopt the updated snapshot here through a
+normal reviewed repository change.
 
 ## Tests
 
