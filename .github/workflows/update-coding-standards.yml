@@ -1,0 +1,165 @@
+---
+name: Update Coding Standards
+
+# yamllint disable-line rule:truthy
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Coding standards release tag, or latest'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: Materialize coding standards
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Resolve, verify, and materialize coding standards
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          readonly config_file='.codingstandardrc'
+          readonly upstream_repo='wesley-dean/coding_standards'
+          readonly archive_name='coding-standards.tar.gz'
+          readonly destination='doc/standards'
+
+          fail() {
+            printf 'error: %s\n' "$1" >&2
+            exit 1
+          }
+
+          read_existing_version() {
+            local line
+            local version=''
+
+            [[ -f ${config_file} ]] || return 0
+
+            while IFS= read -r line || [[ -n ${line} ]]; do
+              [[ -z ${line} || ${line} == \#* ]] && continue
+              [[ ${line} == *=* ]] || fail "malformed line in ${config_file}: ${line}"
+
+              if [[ ${line%%=*} == CODING_STANDARD_VERSION ]]; then
+                [[ -z ${version} ]] || fail 'duplicate CODING_STANDARD_VERSION'
+                version=${line#*=}
+              fi
+            done <"${config_file}"
+
+            printf '%s\n' "${version}"
+          }
+
+          current_version="$(read_existing_version)"
+          requested_version=${REQUESTED_VERSION:-${current_version:-latest}}
+
+          if [[ ${requested_version} == latest ]]; then
+            resolved_version="$(gh api "repos/${upstream_repo}/releases/latest" --jq '.tag_name')"
+          else
+            resolved_version=${requested_version}
+            gh api "repos/${upstream_repo}/releases/tags/${resolved_version}" >/dev/null
+          fi
+
+          [[ ${resolved_version} =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
+            fail "unsafe release tag: ${resolved_version}"
+
+          archive_url="https://github.com/${upstream_repo}/releases/download/${resolved_version}/${archive_name}"
+          checksum_url="${archive_url}.sha256"
+          checksum_file="${RUNNER_TEMP}/${archive_name}.sha256"
+
+          curl -fsSL "${checksum_url}" -o "${checksum_file}"
+          expected_hash="$(awk -v name="${archive_name}" '$2 == name { print $1 }' "${checksum_file}")"
+          [[ ${expected_hash} =~ ^[[:xdigit:]]{64}$ ]] || \
+            fail "invalid SHA-256 metadata for ${resolved_version}"
+          expected_hash=${expected_hash,,}
+
+          cat >"${config_file}" <<EOF
+          CODING_STANDARD_VERSION=${resolved_version}
+          CODING_STANDARD_HASH=sha256:${expected_hash}
+          CODING_STANDARD_URL=${archive_url}
+          CODING_STANDARD_DESTINATION=${destination}
+          EOF
+
+          declare -A coding_standard=()
+          while IFS= read -r line || [[ -n ${line} ]]; do
+            [[ -z ${line} || ${line} == \#* ]] && continue
+            [[ ${line} == *=* ]] || fail "malformed line in ${config_file}: ${line}"
+
+            key=${line%%=*}
+            value=${line#*=}
+            case ${key} in
+              CODING_STANDARD_VERSION|CODING_STANDARD_HASH|CODING_STANDARD_URL|CODING_STANDARD_DESTINATION)
+                ;;
+              *)
+                fail "unsupported key in ${config_file}: ${key}"
+                ;;
+            esac
+
+            [[ -z ${coding_standard[${key}]+x} ]] || fail "duplicate key in ${config_file}: ${key}"
+            coding_standard[${key}]=${value}
+          done <"${config_file}"
+
+          for key in \
+            CODING_STANDARD_VERSION \
+            CODING_STANDARD_HASH \
+            CODING_STANDARD_URL \
+            CODING_STANDARD_DESTINATION; do
+            [[ -n ${coding_standard[${key}]:-} ]] || fail "missing key in ${config_file}: ${key}"
+          done
+
+          [[ ${coding_standard[CODING_STANDARD_VERSION]} == "${resolved_version}" ]] || \
+            fail 'configured standards version changed during population'
+          [[ ${coding_standard[CODING_STANDARD_DESTINATION]} == doc/standards ]] || \
+            fail 'CODING_STANDARD_DESTINATION must be doc/standards'
+          [[ ${coding_standard[CODING_STANDARD_HASH]} =~ ^sha256:[[:xdigit:]]{64}$ ]] || \
+            fail 'CODING_STANDARD_HASH must contain a SHA-256 digest'
+          [[ ${coding_standard[CODING_STANDARD_URL]} == "${archive_url}" ]] || \
+            fail 'CODING_STANDARD_URL does not identify the resolved release asset'
+
+          archive_file="${RUNNER_TEMP}/${archive_name}"
+          curl -fsSL "${coding_standard[CODING_STANDARD_URL]}" -o "${archive_file}"
+
+          actual_hash="$(sha256sum "${archive_file}" | awk '{print $1}')"
+          configured_hash=${coding_standard[CODING_STANDARD_HASH]#sha256:}
+          [[ ${actual_hash} == "${configured_hash}" ]] || \
+            fail "archive SHA-256 mismatch: expected ${configured_hash}, got ${actual_hash}"
+
+          while IFS= read -r entry; do
+            normalized=${entry#./}
+            case ${normalized} in
+              ''|.)
+                continue
+                ;;
+              /*|..|../*|*/../*|*/..)
+                fail "unsafe archive member: ${entry}"
+                ;;
+              standards|standards/*)
+                fail "archive contains an unexpected outer standards directory: ${entry}"
+                ;;
+            esac
+          done < <(tar -tzf "${archive_file}")
+
+          if tar -tvzf "${archive_file}" | awk '$1 ~ /^[lh]/ { found=1 } END { exit !found }'; then
+            fail 'archive contains a symbolic or hard link'
+          fi
+
+          stage="$(mktemp -d "${RUNNER_TEMP}/coding-standards.XXXXXX")"
+          trap 'find "${stage}" -mindepth 1 -delete 2>/dev/null || true; rmdir "${stage}" 2>/dev/null || true' EXIT
+          tar -xzf "${archive_file}" -C "${stage}"
+
+          mkdir -p "${coding_standard[CODING_STANDARD_DESTINATION]}"
+          find "${coding_standard[CODING_STANDARD_DESTINATION]}" -mindepth 1 -delete
+          cp -a "${stage}/." "${coding_standard[CODING_STANDARD_DESTINATION]}/"
+
+          printf '%s\n' 'Resolved configuration:'
+          cat "${config_file}"
+          printf '%s\n' 'Materialized documentation tree:'
+          find doc/ -print
