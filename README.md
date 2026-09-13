@@ -144,39 +144,27 @@ Bashdeps.
 
 ## Shared standards
 
-Shared coding standards use a separate lifecycle from executable repository
-tools.  They are not managed by bashdeps or Make.
+The complete shared standards library from
+[`wesley-dean/coding_standards`](https://github.com/wesley-dean/coding_standards)
+is committed beneath `doc/standards/`, preserving the upstream `standards/`
+directory hierarchy.
 
-The manually dispatched `Update Coding Standards` GitHub Actions workflow selects
-one released `wesley-dean/coding_standards` archive.  Version selection follows
-this order:
+These files are ordinary tracked repository content so developers and coding
+agents can read the governing standards from a normal checkout without a network
+bootstrap.  AWK Minifier does not contain a standards downloader, synchronization
+Make target, dedicated configuration file, or standards-update GitHub Actions
+workflow.
 
-1. an explicit workflow `version` input;
-2. `CODING_STANDARD_VERSION` from project-root `.codingstandardrc`; or
-3. `latest` when neither exists.
+Imported standards are externally maintained copies and should not be edited
+locally.  Shared changes belong in `coding_standards`; adopting a newer snapshot is
+an intentional repository maintenance change that replaces or updates
+`doc/standards/` and is reviewed through the normal Git workflow.
 
-`latest` is resolved to a concrete release tag before configuration is populated.
-The workflow writes a concrete `.codingstandardrc` containing the selected version,
-SHA-256 digest, release-asset URL, and `doc/standards` destination.  It then
-re-reads and validates that configuration, downloads the archive identified by the
-configuration, verifies the archive digest, and materializes the complete
-standards tree beneath `doc/standards/`.
+Receiving the complete library does not make every language-specific standard
+applicable to AWK Minifier.  Repository governance, including `AGENTS.md`,
+determines applicability.
 
-The intended steady state is for `.codingstandardrc` and `doc/standards/` to be
-tracked repository content.  Coding agents and developers can therefore read the
-governing standards from an ordinary checkout without performing a network
-bootstrap.
-
-The current workflow is a proof of concept: it performs resolution, verification,
-and materialization in the GitHub Actions workspace and prints the resulting
-`doc/` tree with `find doc/ -print`.  It does not yet commit or push changes.
-
-Imported standards are externally managed copies and should not be edited locally.
-Shared changes belong in `coding_standards` and are adopted through a later released
-version.  Repository governance determines which files in the complete standards
-library apply to AWK Minifier.
-
-See ADR-025 for the governing lifecycle.
+See ADR-025 for the committed-snapshot decision.
 
 ## Documentation
 
