@@ -13,8 +13,6 @@ SOURCE_FILES := src/diagnostics.awk src/output.awk src/context.awk src/lexer.awk
 
 VENDOR_DIR := vendor
 DEPENDENCY_MANIFEST := dependencies.txt
-STANDARDS_MANIFEST := dependencies-standards.txt
-STANDARDS_ROOT := doc/standards
 BASHDEPS := $(VENDOR_DIR)/bashdeps.bash
 BASHDEPS_VERSION := 0.0.6
 BASHDEPS_URL := https://github.com/wesley-dean/bashdeps/releases/download/v$(BASHDEPS_VERSION)/bashdeps.bash
@@ -34,7 +32,7 @@ VERSION ?= $(shell git describe --tags --always 2>/dev/null || printf '0.0.0-dev
 BUILD_COMMIT ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || printf 'unknown')
 BUILD_DATE ?= $(shell git show -s --format=%cI HEAD 2>/dev/null || printf 'unknown')
 
-.PHONY: all adr-index build check checksums clean deps deps-check distclean docs docs-clean FORCE standards standards-check test verify-bashdeps verify-build-deps
+.PHONY: all adr-index build check checksums clean deps deps-check distclean docs docs-clean FORCE test verify-bashdeps verify-build-deps
 
 all: deps
 	$(MAKE) --no-print-directory build
@@ -178,13 +176,6 @@ deps: $(BASHDEPS) $(DEPENDENCY_MANIFEST)
 
 deps-check: verify-bashdeps $(DEPENDENCY_MANIFEST)
 	"$(BASHDEPS)" verify "$(DEPENDENCY_MANIFEST)"
-
-standards: $(BASHDEPS) $(STANDARDS_MANIFEST)
-	$(MAKE) --no-print-directory verify-bashdeps
-	"$(BASHDEPS)" sync --dest-root "$(STANDARDS_ROOT)" "$(STANDARDS_MANIFEST)"
-
-standards-check: verify-bashdeps $(STANDARDS_MANIFEST)
-	"$(BASHDEPS)" verify --dest-root "$(STANDARDS_ROOT)" "$(STANDARDS_MANIFEST)"
 
 adr-index:
 	@test -f "$(ADRCTL)" || { printf '%s\n' 'Missing vendor/adrctl.bash; run make deps or make all' >&2; exit 1; }
