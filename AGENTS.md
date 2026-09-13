@@ -50,7 +50,13 @@ ADR-023 governs physical newline elimination.  For successful portable-AWK input
 transformed source contains exactly one physical newline when a first-line shebang
 is preserved and zero otherwise.  Grammar-optional newlines disappear; remaining
 statement and rule terminators become semicolons.  Explicit backslash-newline
-continuations disappear without becoming statement boundaries.
+continuation between source tokens disappears without becoming a statement
+boundary.
+
+Backslash-newline inside a string or regexp literal is outside the accepted
+portable input contract because the supported AWK implementations do not agree on
+its observable semantics.  Reject that source with nonzero status and no partial
+STDOUT rather than normalizing it according to one implementation.
 
 Do not treat all newlines alike.  In particular, preserve structural recognition
 of `if`, `for`, ordinary `while`, function-definition headers, `do ... while`
@@ -128,16 +134,17 @@ Every public behavior suite should cover:
 
 Add regression fixtures for every confirmed semantic bug.  Prefer semantic
 comparisons in addition to exact golden text where the exact byte representation
-is not itself the contract.  Malformed-input tests must verify both nonzero status
-and absence of partial STDOUT.
+is not itself the contract.  Malformed or rejected non-portable-input tests must
+verify both nonzero status and absence of partial STDOUT.
 
 Portability testing should include at least GNU awk and mawk, with BusyBox awk and
 a BSD/macOS AWK implementation where practical.
 
 Newline tests must include physical-line counts, statement and rule separation,
 control headers, nested conditionals, ordinary and `do ... while` loops,
-function-definition line breaks, explicit continuations, comments around optional
-newlines, idempotence, and candidate self-minification.
+function-definition line breaks, portable explicit continuation between tokens,
+rejection of literal-internal backslash-newline, comments around optional newlines,
+idempotence, and candidate self-minification.
 
 Build-pipeline tests must also verify the previous-release lineage: the minified
 artifact body must match the output of the pinned `vendor/awk-minifier.awk` when
