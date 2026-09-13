@@ -30,7 +30,8 @@ exact output and semantic equivalence where practical.  Important classes includ
 - division, chained division, and `/=`;
 - regexp pattern rules and match operators;
 - horizontal whitespace and indentation;
-- physical newlines and backslash continuations;
+- physical newlines and portable backslash continuation between tokens;
+- rejection of backslash-newline inside string and regexp literals;
 - control-header newlines after `if`, `for`, and ordinary `while`;
 - `do ... while` trailers, including nested loops;
 - function-definition header line breaks;
@@ -40,9 +41,10 @@ exact output and semantic equivalence where practical.  Important classes includ
 - first-line shebang handling; and
 - idempotence of the transformation.
 
-Malformed-input tests must assert both a nonzero exit status and empty STDOUT.
-This protects the buffered-output contract: an error must not expose a partial
-transformation that a caller could mistake for success.
+Malformed or explicitly rejected non-portable-input tests must assert both a
+nonzero exit status and empty STDOUT.  This protects the buffered-output contract:
+an error must not expose a partial transformation that a caller could mistake for
+success.
 
 ## Physical-line invariant
 
@@ -60,7 +62,20 @@ statement or rule.
 A significant source newline that remains grammatically necessary must become a
 semicolon.  Grammar-optional newlines disappear.  Tests should therefore assert
 both byte-level shape and program behavior for control flow, rule boundaries, and
-continuations.
+portable continuations.
+
+## Continuation portability
+
+Backslash-newline between source tokens is part of the accepted portable contract
+and is removed without creating a statement boundary.  Its tests compare both
+exact output and original/transformed behavior.
+
+Backslash-newline inside a string or regexp literal is different.  Portability
+validation found that supported AWK implementations do not agree on the observable
+semantics of that source construct.  The transformer therefore rejects it rather
+than selecting one implementation's interpretation.  Tests must verify nonzero
+status, the dedicated portability diagnostic, and empty STDOUT on every supported
+AWK implementation.
 
 ## Semantic comparisons
 
@@ -89,7 +104,9 @@ fragment; wrappers such as BusyBox should therefore be exposed through an `awk`
 symlink when needed.
 
 A portability failure is a product failure unless repository governance explicitly
-allows the implementation-specific behavior.
+allows the implementation-specific behavior.  When supported implementations
+disagree on source semantics, the portable transformer should fail closed rather
+than silently choose one interpretation.
 
 ## Build evidence
 
