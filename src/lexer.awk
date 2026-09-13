@@ -3,9 +3,10 @@
 ## @details
 ## This module recognizes identifier boundaries, operand-sensitive keywords,
 ## string literals, regexp literals, and comments.  Literal scanners preserve
-## literal bytes except for lexical backslash-newline continuation, which ADR-023
-## requires to disappear before output.  Slash classification itself remains
-## contextual and is coordinated by the transformation loop.
+## literal bytes and reject backslash-newline inside string or regexp literals
+## because tested AWK implementations do not agree on that construct's semantics.
+## Slash classification itself remains contextual and is coordinated by the
+## transformation loop.
 
 ## @fn is_identifier_start(ch)
 ## @brief Reports whether a character may begin an AWK identifier.
@@ -68,10 +69,10 @@ function keyword_expects_operand(word) {
 ## @details
 ## The function consumes the global buffered `source`, writes transformed bytes to
 ## the global output buffer through `emit`, and tracks escapes until the closing
-## quote.  Backslash-newline continuation is removed before literal bytes are
-## copied so a continued literal satisfies ADR-023's physical-line invariant.  An
-## unescaped newline or EOF before the closing quote records a transformation
-## failure through `fail`.
+## quote.  Backslash-newline inside a string is rejected because GNU/Linux AWKs
+## and the macOS system AWK do not provide a uniform behavior for that source
+## construct.  An unescaped newline or EOF before the closing quote records the
+## ordinary unterminated-string failure.
 ## @param pos Position of the opening quote.
 ## @param length_source Total source length.
 ## @local i Current source position.
@@ -83,9 +84,10 @@ function keyword_expects_operand(word) {
 ## @par STDOUT
 ## Nothing is written immediately; bytes are buffered through `emit`.
 ## @par STDERR
-## Nothing is written immediately; malformed input is recorded through `fail`.
+## Nothing is written immediately; malformed or non-portable input is recorded
+## through `fail`.
 ## @returns Position immediately after the closing quote, or after the failing
-## position when the string is malformed.
+## position when the string is malformed or non-portable.
 function scan_string(pos, length_source,    i, ch, nextch, escaped) {
   emit_pending_space()
   emit("\"")
@@ -97,9 +99,8 @@ function scan_string(pos, length_source,    i, ch, nextch, escaped) {
     nextch = substr(source, i + 1, 1)
 
     if (ch == "\\" && nextch == "\n") {
-      i++
-      escaped = 0
-      continue
+      fail("backslash-newline inside string literal is not portable")
+      return i + 2
     }
 
     if (ch == "\n" && !escaped) {
@@ -129,10 +130,10 @@ function scan_string(pos, length_source,    i, ch, nextch, escaped) {
 ## @details
 ## The function consumes the global buffered `source`, writes transformed bytes to
 ## the global output buffer through `emit`, and tracks escapes until the closing
-## slash.  Backslash-newline continuation is removed before regexp bytes are
-## copied so a continued regexp satisfies ADR-023's physical-line invariant.  An
-## unescaped newline or EOF before the closing slash records a transformation
-## failure through `fail`.
+## slash.  Backslash-newline inside a regexp is rejected because GNU/Linux AWKs
+## and the macOS system AWK do not provide a uniform behavior for that source
+## construct.  An unescaped newline or EOF before the closing slash records the
+## ordinary unterminated-regexp failure.
 ## @param pos Position of the opening slash.
 ## @param length_source Total source length.
 ## @local i Current source position.
@@ -144,9 +145,10 @@ function scan_string(pos, length_source,    i, ch, nextch, escaped) {
 ## @par STDOUT
 ## Nothing is written immediately; bytes are buffered through `emit`.
 ## @par STDERR
-## Nothing is written immediately; malformed input is recorded through `fail`.
+## Nothing is written immediately; malformed or non-portable input is recorded
+## through `fail`.
 ## @returns Position immediately after the closing slash, or after the failing
-## position when the regexp is malformed.
+## position when the regexp is malformed or non-portable.
 function scan_regexp(pos, length_source,    i, ch, nextch, escaped) {
   emit_pending_space()
   emit("/")
@@ -158,9 +160,8 @@ function scan_regexp(pos, length_source,    i, ch, nextch, escaped) {
     nextch = substr(source, i + 1, 1)
 
     if (ch == "\\" && nextch == "\n") {
-      i++
-      escaped = 0
-      continue
+      fail("backslash-newline inside regexp literal is not portable")
+      return i + 2
     }
 
     if (ch == "\n" && !escaped) {
