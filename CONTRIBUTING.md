@@ -11,7 +11,14 @@ architecture and should not be silently contradicted by an implementation change
 Maintained product code is portable AWK.  Build and repository orchestration may
 use Bash and GNU Make.
 
-Typical local validation is:
+Prepare repository-scoped tools before building:
+
+```bash
+make deps
+make deps-check
+```
+
+Typical local validation is then:
 
 ```bash
 make build
@@ -19,18 +26,14 @@ make check
 make test
 ```
 
+`make all` is available when dependency convergence followed by a build is the
+desired lifecycle.
+
 When multiple AWK implementations are available, run the suite against them:
 
 ```bash
 make test AWK_BIN=mawk
 make test AWK_BIN=gawk
-```
-
-Repository-scoped tools are prepared explicitly:
-
-```bash
-make deps
-make deps-check
 ```
 
 Shared standards use their own lifecycle:
@@ -65,8 +68,10 @@ Please include regression coverage for changes involving:
 - differences among modular and assembled artifact forms.
 
 The current candidate must never be used as its own production minification trust
-root.  During bootstrap, `dist/awk-minifier.min.awk` is intentionally a copy of
-`dist/awk-minifier.dev.awk`.
+root.  Production `.min.awk` artifacts are built with the Bashdeps-pinned AWK
+Minifier v0.1.0 release.  Build-pipeline changes should preserve explicit
+previous-release lineage and fail rather than silently substituting another
+transformer.
 
 ## Commits and pull requests
 

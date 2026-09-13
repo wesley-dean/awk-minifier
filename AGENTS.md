@@ -67,19 +67,28 @@ dist/awk-minifier.min.awk
 
 with adjacent `.sha256` companions.
 
-During bootstrap, `.min.awk` must be byte-for-byte identical to `.dev.awk`.  Do
-not use the current candidate to create its own production minified artifact.
-After a trustworthy release exists, a separately governed change may pin that
-release through Bashdeps and use it as the transformer for later releases.
+AWK Minifier v0.1.0 is the pinned previous-release production transformer.
+Bashdeps synchronizes it as `vendor/awk-minifier.awk`, and the build applies it to
+the body of the current ordinary artifact to create `.min.awk`.  The generated
+provenance header is kept outside the transformer input and regenerated for the
+minified artifact so version, build date, build commit, and minifier identity
+remain inspectable.
+
+The current candidate must never be used to create its own production `.min.awk`
+release artifact.  Do not silently fall back to copying `.dev.awk`, to
+self-minification, or to another transformer when the pinned dependency is missing
+or fails.
 
 `make build` must remain network-free and must not invoke dependency or standards
-synchronization implicitly.
+synchronization implicitly.  Steady-state builds require prepared
+`vendor/awk-minifier.awk` state; use `make deps` or `make all` before `make build`.
 
 ## Dependencies and standards
 
 Make directly bootstraps only `vendor/bashdeps.bash`, using the pinned version and
 SHA-256 digest in the Makefile.  Other repository tools belong in
-`dependencies.txt`.
+`dependencies.txt`, including the pinned previous-release AWK Minifier used by the
+production build.
 
 Network boundaries:
 
@@ -111,6 +120,10 @@ and absence of partial STDOUT.
 
 Portability testing should include at least GNU awk and mawk, with BusyBox awk and
 a BSD/macOS AWK implementation where practical.
+
+Build-pipeline tests must also verify the previous-release lineage: the minified
+artifact body must match the output of the pinned `vendor/awk-minifier.awk` when
+that transformer receives the ordinary artifact body.
 
 ## Documentation
 

@@ -59,24 +59,36 @@ allows the implementation-specific behavior.
 
 ## Build evidence
 
-`make build` must remain network-free and independent of prepared repository
-dependencies during bootstrap.  CI verifies that a fresh build does not create
-`vendor/`.
+`make build` must remain network-free and must not acquire or repair repository
+dependencies.  Steady-state minification requires prepared
+`vendor/awk-minifier.awk` state, so CI first verifies that a fresh `make build`
+fails without creating `vendor/`, then prepares dependencies through `make deps`
+and performs the build.
 
 The build must produce exactly three executable `.awk` release artifacts with
-adjacent `.sha256` companions.  During bootstrap, the development and minified
-artifacts must compare byte-for-byte equal.  The ordinary artifact should differ
-because project-governed Doxygen lines are stripped.
+adjacent `.sha256` companions.  The development, ordinary, and minified artifacts
+must identify their representation accurately in the generated header.  The
+ordinary artifact removes project-governed Doxygen lines, while the minified
+artifact body must exactly match the output of the pinned AWK Minifier v0.1.0 when
+it transforms the ordinary artifact body.
 
-Repeated builds with the same source, version, commit, and commit-derived build
-date must produce identical artifact and checksum bytes.
+The minified artifact retains a build-owned provenance header outside the
+transformer input.  CI therefore compares artifact bodies after the
+`# End generated header.` marker rather than comparing the complete minified file
+to the raw transformer output.
+
+Repeated builds with the same source, version, commit, commit-derived build date,
+prepared dependency bytes, and AWK implementation must produce identical artifact
+and checksum bytes.  CI removes the first `dist/` tree and performs a fresh second
+build before comparing bytes.
 
 ## Dependency and documentation evidence
 
 `make deps` is the explicit network-capable path for repository tools;
-`make deps-check` verifies prepared state offline.  `make standards` and
-`make standards-check` provide the equivalent separate lifecycle for synchronized
-shared standards.
+`make deps-check` verifies prepared state offline.  The tool verification includes
+the pinned v0.1.0 AWK Minifier that participates in production artifact
+construction.  `make standards` and `make standards-check` provide the equivalent
+separate lifecycle for synchronized shared standards.
 
 `make docs` consumes prepared `awk-doxygen` and `adrctl` state without acquiring
 or repairing dependencies.  CI verifies generated ADR navigation and Doxygen HTML

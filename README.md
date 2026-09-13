@@ -61,26 +61,34 @@ for each:
   documentation;
 - `dist/awk-minifier.awk` removes only project-governed Doxygen documentation
   lines; and
-- `dist/awk-minifier.min.awk` occupies the stable minified release slot.
+- `dist/awk-minifier.min.awk` contains the ordinary artifact body transformed by
+  the pinned AWK Minifier v0.1.0 release.
 
-During bootstrap, `awk-minifier.min.awk` is intentionally an exact byte-for-byte
-copy of `awk-minifier.dev.awk`.  Once a trustworthy previous AWK Minifier release
-exists, a later governed change will pin that released artifact through Bashdeps
-and use it to produce subsequent `.min.awk` artifacts.  The current release
+The v0.1.0 release is the first trusted production minifier and is synchronized by
+Bashdeps as `vendor/awk-minifier.awk`.  The generated provenance header remains
+outside the transformer input so the final minified artifact still identifies its
+version, build date, build commit, and minifier version.  The current release
 candidate is never used as its own production trust root.
 
 ## Building and testing
 
-GNU Make is the canonical orchestration interface:
+GNU Make is the canonical orchestration interface.  Prepare repository tools
+before building:
 
 ```bash
+make deps
+make deps-check
 make build
 make check
 make test
 ```
 
-`make build` is network-free and does not prepare dependencies.  The bootstrap
-build does not require a previous AWK Minifier release.
+`make all` is the convenience lifecycle that runs dependency preparation followed
+by the build.
+
+`make build` itself is network-free and never repairs dependency state.  It now
+requires the prepared `vendor/awk-minifier.awk` dependency because steady-state
+`.min.awk` construction uses the pinned previous release.
 
 The test harness accepts an explicit interpreter:
 
@@ -105,9 +113,10 @@ make deps        # may access the network and converge vendor state
 make deps-check  # offline verification; does not repair state
 ```
 
-The tool manifest includes the released `awk-doxygen` filter and `adrctl`.
-A previously released AWK Minifier will be added only when the project is ready to
-leave bootstrap minification.
+The tool manifest includes the released `awk-doxygen` filter, `adrctl`, and AWK
+Minifier v0.1.0.  The v0.1.0 ordinary release artifact is pinned by immutable
+release URL and SHA-256 digest and is used only as the previous-release production
+transformer.
 
 System packages such as `awk`, `make`, and `doxygen` are not installed by
 Bashdeps.

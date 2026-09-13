@@ -68,11 +68,12 @@ See [ADR-005](adr/ADR-005-dependency-management-and-network-boundaries.md) and
 ### ADR-006: Three Release Artifact Flavors, Metadata, and Checksums
 
 ADR-019 supersedes the Bash-specific artifact names and Bash-Minifier pipeline.
-AWK Minifier ships `.dev.awk`, `.awk`, and `.min.awk` artifacts with adjacent
-SHA-256 companions and a truthful bootstrap rule for `.min.awk`.
+ADR-022 completes the bootstrap transition by using the pinned v0.1.0 AWK
+Minifier for the `.min.awk` body while preserving build-owned provenance metadata.
 
-See [ADR-006](adr/ADR-006-release-artifact-flavors-and-metadata.md) and
-[ADR-019](adr/ADR-019-release-artifacts-and-bootstrap-minification.md).
+See [ADR-006](adr/ADR-006-release-artifact-flavors-and-metadata.md),
+[ADR-019](adr/ADR-019-release-artifacts-and-bootstrap-minification.md), and
+[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md).
 
 ### ADR-007: Doxygen-Based Verbose Source Documentation Standard
 
@@ -149,11 +150,12 @@ and [ADR-018](adr/ADR-018-portable-awk-runtime-and-explicit-source-assembly.md).
 
 Every dependency expands the trusted computing base and is reviewed according to
 execution context, authority, parsed inputs, side effects, transitive surface,
-supply-chain posture, and failure behavior.  ADR-020 applies this to AWK Minifier's
-tool and standards manifests.
+supply-chain posture, and failure behavior.  ADR-022 applies that review to the
+v0.1.0 AWK Minifier now used as executable production build input.
 
-See [ADR-015](adr/ADR-015-dependencies-as-explicit-attack-surface.md) and
-[ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md).
+See [ADR-015](adr/ADR-015-dependencies-as-explicit-attack-surface.md),
+[ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md), and
+[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md).
 
 ### ADR-016: Explicit Threat Modeling for Security-Relevant Changes
 
@@ -186,21 +188,22 @@ See [ADR-018](adr/ADR-018-portable-awk-runtime-and-explicit-source-assembly.md).
 ### ADR-019: Release Artifacts and Bootstrap Minification
 
 Every normal release publishes `awk-minifier.dev.awk`, `awk-minifier.awk`, and
-`awk-minifier.min.awk` plus `.sha256` companions.  Until a previous trustworthy
-release is pinned, `.min.awk` is intentionally an exact copy of `.dev.awk`; later
-releases use a pinned prior release as the production transformer, never the
-current candidate.
+`awk-minifier.min.awk` plus `.sha256` companions.  Version v0.1.0 completed the
+truthful bootstrap rule in which `.min.awk` equaled `.dev.awk`; ADR-022 now governs
+the previous-release production minification path for later releases.
 
-See [ADR-019](adr/ADR-019-release-artifacts-and-bootstrap-minification.md).
+See [ADR-019](adr/ADR-019-release-artifacts-and-bootstrap-minification.md) and
+[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md).
 
 ### ADR-020: Bashdeps-Managed Tools and Standards
 
 Make directly bootstraps only bashdeps, which then manages pinned executable tools
-through `dependencies.txt`.  Shared normative files from `coding_standards` use a
-separate `dependencies-standards.txt` lifecycle rooted at `doc/standards/`, with
-explicit networked synchronization and offline verification.
+through `dependencies.txt`.  The tool manifest now includes the v0.1.0 AWK
+Minifier selected by ADR-022, while shared normative files from
+`coding_standards` retain their separate `dependencies-standards.txt` lifecycle.
 
-See [ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md).
+See [ADR-020](adr/ADR-020-bashdeps-managed-tools-and-standards.md) and
+[ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md).
 
 ### ADR-021: AWK Documentation and Portability Testing
 
@@ -211,3 +214,14 @@ and combines golden, semantic, negative, portability, idempotence, and regressio
 evidence.
 
 See [ADR-021](adr/ADR-021-awk-documentation-and-portability-testing.md).
+
+### ADR-022: Pin v0.1.0 as the Production Minification Transformer
+
+AWK Minifier v0.1.0 is pinned through Bashdeps as
+`vendor/awk-minifier.awk` and is the production transformer for subsequent
+`.min.awk` artifact bodies.  Builds remain offline after dependency preparation,
+preserve generated provenance outside the transformed body, fail closed when the
+pinned transformer is unavailable, and verify exact previous-release lineage in
+CI and release validation.
+
+See [ADR-022](adr/ADR-022-pin-v0.1.0-production-minifier.md).
