@@ -17,15 +17,17 @@ The transformer deliberately favors semantic safety over maximum compression.  I
   required;
 - classifies physical newlines using AWK grammar context, discarding
   grammar-optional newlines and rendering statement or rule terminators as `;`;
-- removes explicit backslash-newline continuations without creating statement
-  boundaries;
+- removes explicit backslash-newline continuations between source tokens without
+  creating statement boundaries;
+- rejects backslash-newline inside string or regexp literals because the supported
+  AWK implementations do not agree on that source construct's semantics;
 - distinguishes regexp delimiters from division and `/=` using lexical context;
-- preserves string and regexp contents byte-for-byte except for lexical
-  backslash-newline continuation;
+- preserves accepted string and regexp contents byte-for-byte while scanning
+  escapes;
 - preserves a first-line AWK shebang and its terminating newline;
 - buffers transformed output until the complete input has been validated; and
-- fails nonzero with a diagnostic on STDERR when a string or regexp literal is
-  unterminated.
+- fails nonzero with a diagnostic on STDERR for malformed or explicitly rejected
+  non-portable literal input.
 
 For successful portable-AWK input, transformed source contains exactly one
 physical newline when a first-line shebang is preserved and zero physical newlines
@@ -34,8 +36,9 @@ rule boundaries become semicolons, while grammar-optional newlines disappear.
 
 The project does not claim that the implementation is a complete AWK parser or
 that it produces the smallest possible byte representation.  When the transformer
-cannot safely prove that a more aggressive rewrite preserves meaning, the
-conservative representation wins.
+cannot safely prove that a more aggressive rewrite preserves meaning across the
+supported portability floor, it fails conservatively rather than selecting one
+implementation's interpretation.
 
 ## Usage
 
@@ -116,7 +119,8 @@ make test AWK_BIN=gawk
 Tests cover modular source and all assembled artifacts, exact transformations,
 semantic equivalence, malformed-input failure behavior, regexp/division
 classification, grammar-aware newline elimination, control-flow continuation,
-explicit continuation handling, physical-line invariants, candidate
+portable explicit continuation between tokens, rejection of non-portable
+literal-internal continuation, physical-line invariants, candidate
 self-minification, and idempotence.
 
 ## Repository dependencies
