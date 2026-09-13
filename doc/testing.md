@@ -150,16 +150,10 @@ build before comparing bytes.
 the pinned v0.2.1 AWK Minifier that participates in production artifact
 construction.
 
-Shared coding standards use the separate ADR-025 lifecycle.  The manually
-dispatched `Update Coding Standards` workflow resolves a released standards
-archive, populates and validates `.codingstandardrc`, verifies the archive digest,
-and materializes `doc/standards/`.  The proof-of-concept workflow currently ends by
-printing the resulting documentation tree with `find doc/ -print`; it does not yet
-commit or push the materialized files.
-
-Once the workflow's persistence path is enabled, CI should treat
-`.codingstandardrc` and `doc/standards/` as tracked repository inputs rather than
-calling a network synchronization target during ordinary product tests.
+Shared coding standards are committed repository inputs under `doc/standards/`.
+Ordinary CI does not fetch, synchronize, or verify them against a remote source;
+the standards snapshot changes through the same reviewed Git process as other
+maintained repository documentation.
 
 `make docs` consumes prepared `awk-doxygen` and `adrctl` state without acquiring
 or repairing dependencies.  CI verifies generated ADR navigation and Doxygen HTML
