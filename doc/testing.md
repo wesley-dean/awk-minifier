@@ -92,8 +92,8 @@ test-only exercise.  This proves that the maintained implementation itself
 satisfies ADR-023's shebang-plus-one-program-line target and that the resulting
 source remains executable AWK.
 
-Candidate self-minification is not production build provenance.  ADR-022 still
-requires production `.min.awk` construction to use the pinned previous release.
+Candidate self-minification is not production build provenance.  ADR-024 requires
+production `.min.awk` construction to use the pinned v0.2.1 previous release.
 Tests must keep those two concerns distinct.
 
 ## Portability
@@ -125,7 +125,7 @@ The build must produce exactly three executable `.awk` release artifacts with
 adjacent `.sha256` companions.  The development, ordinary, and minified artifacts
 must identify their representation accurately in the generated header.  The
 ordinary artifact removes project-governed Doxygen lines, while the minified
-artifact body must exactly match the output of the pinned AWK Minifier v0.1.0 when
+artifact body must exactly match the output of the pinned AWK Minifier v0.2.1 when
 it transforms the ordinary artifact body.
 
 The minified artifact retains a build-owned provenance header outside the
@@ -133,12 +133,10 @@ transformer input.  CI therefore compares artifact bodies after the
 `# End generated header.` marker rather than comparing the complete minified file
 to the raw transformer output.
 
-The production `.min.awk` file may still contain many physical source lines while
-v0.1.0 remains the pinned production transformer.  That representation is not a
-failure of ADR-023: the release artifact contains the current transformer code,
-and its behavior must satisfy the new output-line contract when executed.  A later
-release can advance the production trust anchor after the improved transformer is
-itself released and trusted.
+Because v0.2.1 implements ADR-023's grammar-aware newline elimination, production
+`.min.awk` bodies are expected to contain zero physical newlines.  The generated
+provenance header remains intentionally multiline and outside the transformation
+surface.
 
 Repeated builds with the same source, version, commit, commit-derived build date,
 prepared dependency bytes, and AWK implementation must produce identical artifact
@@ -149,7 +147,7 @@ build before comparing bytes.
 
 `make deps` is the explicit network-capable path for repository tools;
 `make deps-check` verifies prepared state offline.  The tool verification includes
-the pinned v0.1.0 AWK Minifier that participates in production artifact
+the pinned v0.2.1 AWK Minifier that participates in production artifact
 construction.  `make standards` and `make standards-check` provide the equivalent
 separate lifecycle for synchronized shared standards.
 

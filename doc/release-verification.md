@@ -14,7 +14,7 @@ The expected sequence is:
 5. run the public behavior suite against the exact generated artifacts under GNU
    awk and mawk;
 6. verify that the `.min.awk` body exactly matches the output produced by the
-   pinned v0.1.0 transformer from the current ordinary artifact body;
+   pinned v0.2.1 transformer from the current ordinary artifact body;
 7. smoke-test every artifact as an AWK program;
 8. verify every `.awk.sha256` companion;
 9. attest the release artifacts and checksum companions; and
@@ -25,24 +25,27 @@ for it.  A failure before the final release step should therefore leave no new t
 
 ## Previous-release minification
 
-AWK Minifier v0.1.0 is the first trusted production minifier.  Its ordinary
+AWK Minifier v0.2.1 is the current trusted production minifier.  Its ordinary
 release artifact is declared in `dependencies.txt` as
-`vendor/awk-minifier.awk`, using the v0.1.0 release URL and committed SHA-256
-digest:
+`vendor/awk-minifier.awk`, using the immutable v0.2.1 release URL and committed
+SHA-256 digest:
 
 ```text
-78dad61b927c2fe96c0e6ddfef75dd1cf395e5572a3e7a54f73622bd29bd58b6
+567cff8aaf95010efc6bbcf1d84c0dbd3de58566bd10fa7df54ef6178b3fc464
 ```
 
 `make deps` is the only network-capable path that prepares this dependency.
 `make build` remains offline and fails when the prepared transformer is absent.
 
 The production `.min.awk` artifact is derived from the body of the current
-ordinary artifact using the pinned v0.1.0 transformer.  The build-owned generated
-header is not part of the transformer input because v0.1.0 correctly removes
-ordinary comments; instead, the final `.min.awk` receives a fresh provenance
-header naming the current version, build date, build commit, and minifier version.
+ordinary artifact using the pinned v0.2.1 transformer.  The build-owned generated
+header is not part of the transformer input because the transformer correctly
+removes ordinary comments; instead, the final `.min.awk` receives a fresh
+provenance header naming the current version, build date, build commit, and
+minifier version.
 
+Because v0.2.1 implements ADR-023, the transformed artifact body uses
+grammar-aware newline elimination and normally contains no physical newline bytes.
 The current candidate remains prohibited as its own production trust root.  A
 missing or failing previous-release transformer must fail the build rather than
 fall back to copying `.dev.awk`, self-minification, or an unpinned tool.

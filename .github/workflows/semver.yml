@@ -62,7 +62,7 @@ jobs:
           test "${#artifacts[@]}" -eq 3
 
           grep -Fq '# Artifact: minified' dist/awk-minifier.min.awk
-          grep -Fq '# Minifier: AWK Minifier v0.1.0' dist/awk-minifier.min.awk
+          grep -Fq '# Minifier: AWK Minifier v0.2.1' dist/awk-minifier.min.awk
 
           expected_body="${RUNNER_TEMP}/expected-minified-body.awk"
           actual_body="${RUNNER_TEMP}/actual-minified-body.awk"
@@ -70,6 +70,7 @@ jobs:
             awk -f vendor/awk-minifier.awk >"${expected_body}"
           sed '1,/^# End generated header\.$/d' dist/awk-minifier.min.awk >"${actual_body}"
           cmp "${expected_body}" "${actual_body}"
+          test "$(tr -cd '\n' <"${actual_body}" | wc -c | tr -d '[:space:]')" -eq 0
 
           for artifact in "${artifacts[@]}"; do
             gawk -f "${artifact}" </dev/null >/dev/null

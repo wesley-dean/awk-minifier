@@ -22,7 +22,7 @@ BASHDEPS_SHA256 := bb6c807fa12c010950bda06172ac0611d278c57aca1f8352f41502d0d76b4
 DOXYGEN_AWK_FILTER := $(VENDOR_DIR)/doxygen-awk.awk
 ADRCTL := $(VENDOR_DIR)/adrctl.bash
 AWK_MINIFIER := $(VENDOR_DIR)/awk-minifier.awk
-AWK_MINIFIER_VERSION := 0.1.0
+AWK_MINIFIER_VERSION := 0.2.1
 ADR_DIR := doc/adr
 ADR_INDEX_INTRO := $(ADR_DIR)/README.intro.md
 ADR_INDEX_OUTRO := $(ADR_DIR)/README.outro.md
@@ -77,7 +77,7 @@ $(DIST_SCRIPT): $(DIST_DEV_SCRIPT)
 	@chmod 0755 "$@.tmp"
 	@mv "$@.tmp" "$@"
 
-# ADR-022 pins v0.1.0 as the production transformer.  The build-owned provenance
+# ADR-024 pins v0.2.1 as the production transformer.  The build-owned provenance
 # header stays outside the transformer input so every artifact remains
 # self-identifying even though AWK Minifier removes ordinary comments.
 $(DIST_MIN_SCRIPT): $(DIST_SCRIPT) $(AWK_MINIFIER)
