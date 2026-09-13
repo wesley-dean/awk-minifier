@@ -83,7 +83,7 @@ dist/awk-minifier.min.awk
 
 with adjacent `.sha256` companions.
 
-AWK Minifier v0.1.0 is the pinned previous-release production transformer.
+AWK Minifier v0.2.1 is the pinned previous-release production transformer.
 Bashdeps synchronizes it as `vendor/awk-minifier.awk`, and the build applies it to
 the body of the current ordinary artifact to create `.min.awk`.  The generated
 provenance header is kept outside the transformer input and regenerated for the

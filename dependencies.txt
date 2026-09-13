@@ -3,4 +3,4 @@
 
 id=wesley-dean/awk-doxygen@0.0.7 url=https://github.com/wesley-dean/awk-doxygen/releases/download/v0.0.7/doxygen-awk.awk dest=vendor/doxygen-awk.awk digest=sha256:ba71cd1222f6af5ba6b2a78e087930da7ee6f37dfd3fd9776d0766bf7f20d101
 id=wesley-dean/adrctl@0.0.15 url=https://github.com/wesley-dean/adrctl/releases/download/v0.0.15/adrctl.bash dest=vendor/adrctl.bash digest=sha256:d89a48243fdffa43fcc32940a6d23112bc91291e73695256ffd46e2cd0683fde
-id=wesley-dean/awk-minifier@0.1.0 url=https://github.com/wesley-dean/awk-minifier/releases/download/v0.1.0/awk-minifier.awk dest=vendor/awk-minifier.awk digest=sha256:78dad61b927c2fe96c0e6ddfef75dd1cf395e5572a3e7a54f73622bd29bd58b6
+id=wesley-dean/awk-minifier@0.2.1 url=https://github.com/wesley-dean/awk-minifier/releases/download/v0.2.1/awk-minifier.awk dest=vendor/awk-minifier.awk digest=sha256:567cff8aaf95010efc6bbcf1d84c0dbd3de58566bd10fa7df54ef6178b3fc464

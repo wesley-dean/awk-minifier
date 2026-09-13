@@ -77,7 +77,7 @@ portability rather than relying on visual inspection of compressed output.
 
 The current candidate must never be used as its own production minification trust
 root.  Production `.min.awk` artifacts are built with the Bashdeps-pinned AWK
-Minifier v0.1.0 release.  Candidate self-minification is test evidence only.
+Minifier v0.2.1 release.  Candidate self-minification is test evidence only.
 Build-pipeline changes should preserve explicit previous-release lineage and fail
 rather than silently substituting another transformer.
 

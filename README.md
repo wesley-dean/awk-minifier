@@ -76,18 +76,17 @@ for each:
 - `dist/awk-minifier.awk` removes only project-governed Doxygen documentation
   lines; and
 - `dist/awk-minifier.min.awk` contains the ordinary artifact body transformed by
-  the pinned AWK Minifier v0.1.0 release.
+  the pinned AWK Minifier v0.2.1 release.
 
-The v0.1.0 release is the first trusted production minifier and is synchronized by
-Bashdeps as `vendor/awk-minifier.awk`.  The generated provenance header remains
+The v0.2.1 release is the current trusted production minifier and is synchronized
+by Bashdeps as `vendor/awk-minifier.awk`.  The generated provenance header remains
 outside the transformer input so the final minified artifact still identifies its
 version, build date, build commit, and minifier version.  The current release
 candidate is never used as its own production trust root.
 
-The `.min.awk` file representation therefore still reflects the pinned previous
-release's minification behavior until a later release advances that trust anchor.
-The current candidate's more aggressive newline behavior is verified separately by
-self-minification tests; it does not self-host the production release pipeline.
+Because v0.2.1 implements ADR-023's grammar-aware newline elimination, production
+`.min.awk` bodies now use the same zero-or-one-physical-newline representation
+contract as the released transformer itself.
 
 ## Building and testing
 
@@ -136,7 +135,7 @@ make deps-check  # offline verification; does not repair state
 ```
 
 The tool manifest includes the released `awk-doxygen` filter, `adrctl`, and AWK
-Minifier v0.1.0.  The v0.1.0 ordinary release artifact is pinned by immutable
+Minifier v0.2.1.  The v0.2.1 ordinary release artifact is pinned by immutable
 release URL and SHA-256 digest and is used only as the previous-release production
 transformer.
 
