@@ -126,7 +126,7 @@ self-minification, and idempotence.
 
 The Makefile follows the dependency model used by
 [`wesley-dean/bootstrap`](https://github.com/wesley-dean/bootstrap): Make directly
-bootstraps only a pinned `bashdeps.bash`.  Bashdeps then manages other
+bootstraps only a pinned `bashdeps.bash`.  Bashdeps then manages executable
 repository-scoped tools declared in `dependencies.txt`.
 
 ```bash
@@ -144,21 +144,39 @@ Bashdeps.
 
 ## Shared standards
 
-Normative shared standards are synchronized separately from executable tools:
+Shared coding standards use a separate lifecycle from executable repository
+tools.  They are not managed by bashdeps or Make.
 
-```bash
-make standards        # may access the network
-make standards-check  # offline verification; does not repair state
-```
+The manually dispatched `Update Coding Standards` GitHub Actions workflow selects
+one released `wesley-dean/coding_standards` archive.  Version selection follows
+this order:
 
-`dependencies-standards.txt` maps pinned files from
-[`wesley-dean/coding_standards`](https://github.com/wesley-dean/coding_standards)
-into `doc/standards/`, preserving their upstream hierarchy.  Imported standards
-and examples are synchronized copies and should not be edited locally.
+1. an explicit workflow `version` input;
+2. `CODING_STANDARD_VERSION` from project-root `.codingstandardrc`; or
+3. `latest` when neither exists.
 
-Standards that do not yet exist upstream are not fabricated in this repository;
-they can be added to the manifest after they exist in `coding_standards` and can
-be pinned to immutable bytes.
+`latest` is resolved to a concrete release tag before configuration is populated.
+The workflow writes a concrete `.codingstandardrc` containing the selected version,
+SHA-256 digest, release-asset URL, and `doc/standards` destination.  It then
+re-reads and validates that configuration, downloads the archive identified by the
+configuration, verifies the archive digest, and materializes the complete
+standards tree beneath `doc/standards/`.
+
+The intended steady state is for `.codingstandardrc` and `doc/standards/` to be
+tracked repository content.  Coding agents and developers can therefore read the
+governing standards from an ordinary checkout without performing a network
+bootstrap.
+
+The current workflow is a proof of concept: it performs resolution, verification,
+and materialization in the GitHub Actions workspace and prints the resulting
+`doc/` tree with `find doc/ -print`.  It does not yet commit or push changes.
+
+Imported standards are externally managed copies and should not be edited locally.
+Shared changes belong in `coding_standards` and are adopted through a later released
+version.  Repository governance determines which files in the complete standards
+library apply to AWK Minifier.
+
+See ADR-025 for the governing lifecycle.
 
 ## Documentation
 
