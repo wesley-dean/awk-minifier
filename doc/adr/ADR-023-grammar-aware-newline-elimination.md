@@ -25,8 +25,14 @@ are optional in specific grammatical contexts, including after an opening brace,
 a comma, logical `&&` or `||`, `do`, `else`, and the closing parenthesis of an
 `if`, `for`, or ordinary `while` header.  Function definitions permit optional
 newlines between the parameter-list closing parenthesis and the action.  Nested
-actions are themselves terminated statements.  A backslash immediately followed
-by a newline has no lexical effect.
+actions are themselves terminated statements.
+
+Backslash-newline continuation between source tokens can be removed without
+creating a statement boundary.  Portability testing found a narrower boundary
+inside literals: GNU/Linux AWKs and the macOS system AWK do not provide uniform
+observable behavior for backslash-newline embedded in string or regexp literal
+source.  The portable contract therefore rejects that construct instead of
+normalizing it according to one implementation.
 
 `do ... while` requires additional context.  The closing parenthesis of an
 ordinary `while` header can be followed by an optional newline before its body,
@@ -72,16 +78,20 @@ The transformer SHALL handle source newlines according to these classes:
 1. **Shebang boundary.**  The newline terminating a first-line `#!` shebang SHALL
    be preserved so the following program does not become part of the interpreter
    directive.
-2. **Explicit continuation.**  A backslash immediately followed by newline outside
-   a comment SHALL be removed as a pair.  It SHALL NOT create a statement
-   terminator or reset expression context.
-3. **Blank or comment-only line.**  A newline on a physical source line containing
+2. **Explicit continuation between tokens.**  A backslash immediately followed by
+   newline outside a string, regexp literal, or comment SHALL be removed as a
+   pair.  It SHALL NOT create a statement terminator or reset expression context.
+3. **Literal-internal continuation.**  A backslash immediately followed by newline
+   inside a string or regexp literal SHALL cause transformation failure because
+   the supported AWK implementations do not agree on its semantics.  Buffered
+   output SHALL NOT be published.
+4. **Blank or comment-only line.**  A newline on a physical source line containing
    no significant token SHALL be discarded.
-4. **Grammar-optional newline.**  A newline accepted through a grammar
+5. **Grammar-optional newline.**  A newline accepted through a grammar
    `newline_opt` position SHALL be discarded.  A single ASCII space MAY be emitted
    when removing the newline is necessary to keep adjacent keyword/token text
    lexically separate, notably after `do` or `else`.
-5. **Statement or rule terminator.**  Any remaining significant newline SHALL be
+6. **Statement or rule terminator.**  Any remaining significant newline SHALL be
    represented by `;` rather than by a physical newline.
 
 Leading horizontal indentation on a new physical source line SHALL remain
@@ -126,12 +136,14 @@ production `.min.awk` provenance.
 2. Newlines that terminate statements or rules become semicolons rather than
    disappearing.
 3. Grammar-optional newlines disappear without creating empty control bodies.
-4. Explicit backslash-newline continuation is removed without becoming a
-   statement boundary.
-5. Ordinary `while` headers and `do ... while` trailers are distinguished.
-6. The transformation remains portable AWK and is tested under multiple AWK
+4. Explicit backslash-newline continuation between tokens is removed without
+   becoming a statement boundary.
+5. Literal-internal backslash-newline is rejected consistently instead of being
+   normalized according to one AWK implementation.
+6. Ordinary `while` headers and `do ... while` trailers are distinguished.
+7. The transformation remains portable AWK and is tested under multiple AWK
    implementations.
-7. Semantic preservation remains more important than reducing another byte.
+8. Semantic preservation remains more important than reducing another byte.
 
 ## Non-Promises
 
@@ -141,8 +153,10 @@ production `.min.awk` provenance.
    safe horizontal separator spaces may remain.
 3. Implementation-specific AWK extensions are not automatically part of the
    portable input contract merely because one tested interpreter accepts them.
-4. The current candidate is not promoted to its own production build trust root.
-5. A missing trailing newline in transformed output is intentional and is not a
+4. Source that depends on implementation-specific handling of backslash-newline
+   inside a string or regexp literal is not accepted by the portable transformer.
+5. The current candidate is not promoted to its own production build trust root.
+6. A missing trailing newline in transformed output is intentional and is not a
    promise that every downstream text-processing tool treats the file identically
    to a newline-terminated text file.
 
@@ -166,6 +180,14 @@ commas, and other continuation contexts are not statement terminators.  Insertin
 a semicolon after `if (condition)` or an ordinary `while (condition)`, for example,
 can create an empty body and change the program while remaining syntactically
 plausible.
+
+### Normalize Backslash-Newline Inside Literals
+
+Rejected after portability testing showed different observable behavior across the
+supported AWK implementations.  Choosing the GNU/Linux interpretation would make
+successful transformation depend on implementation-specific source semantics.
+Failing closed provides a stable portable contract and preserves the buffered
+no-partial-success property.
 
 ### Preserve Newlines Around All Control Flow
 
@@ -194,7 +216,8 @@ ordinary source-line boundaries become either nothing or semicolons.
 Tests must cover exact physical-line counts, statement separation, top-level rule
 separation, control headers on the preceding line, nested conditionals, ordinary
 `while`, `for`, simple and braced `do ... while`, function-definition line breaks,
-explicit backslash continuation, comments around optional newlines, semantic
+explicit backslash continuation between tokens, rejection of backslash-newline
+inside string and regexp literals, comments around optional newlines, semantic
 equivalence, idempotence, and candidate self-minification.
 
 This change deliberately improves the runtime transformer before the production
