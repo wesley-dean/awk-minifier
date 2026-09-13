@@ -31,7 +31,6 @@ jobs:
 
           readonly config_file='.codingstandardrc'
           readonly upstream_repo='wesley-dean/coding_standards'
-          readonly archive_name='coding-standards.tar.gz'
           readonly destination='doc/standards'
 
           fail() {
@@ -58,54 +57,92 @@ jobs:
             printf '%s\n' "${version}"
           }
 
+          read_config() {
+            local line
+            local key
+            local value
+
+            coding_standard=()
+            while IFS= read -r line || [[ -n ${line} ]]; do
+              [[ -z ${line} || ${line} == \#* ]] && continue
+              [[ ${line} == *=* ]] || fail "malformed line in ${config_file}: ${line}"
+
+              key=${line%%=*}
+              value=${line#*=}
+              case ${key} in
+                CODING_STANDARD_VERSION|CODING_STANDARD_HASH|CODING_STANDARD_URL|CODING_STANDARD_DESTINATION)
+                  ;;
+                *)
+                  fail "unsupported key in ${config_file}: ${key}"
+                  ;;
+              esac
+
+              [[ -z ${coding_standard[${key}]+x} ]] || \
+                fail "duplicate key in ${config_file}: ${key}"
+              coding_standard[${key}]=${value}
+            done <"${config_file}"
+          }
+
           current_version="$(read_existing_version)"
           requested_version=${REQUESTED_VERSION:-${current_version:-latest}}
 
           if [[ ${requested_version} == latest ]]; then
-            resolved_version="$(gh api "repos/${upstream_repo}/releases/latest" --jq '.tag_name')"
+            release_json="$(gh api "repos/${upstream_repo}/releases/latest")"
           else
-            resolved_version=${requested_version}
-            gh api "repos/${upstream_repo}/releases/tags/${resolved_version}" >/dev/null
+            release_json="$(gh api "repos/${upstream_repo}/releases/tags/${requested_version}")"
           fi
+
+          resolved_version="$(jq -r '.tag_name' <<<"${release_json}")"
+          archive_url="$(jq -r '.tarball_url' <<<"${release_json}")"
 
           [[ ${resolved_version} =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || \
             fail "unsafe release tag: ${resolved_version}"
+          [[ ${archive_url} == "https://api.github.com/repos/${upstream_repo}/tarball/${resolved_version}" ]] || \
+            fail 'release tarball URL does not match the resolved coding-standards release'
 
-          archive_url="https://github.com/${upstream_repo}/releases/download/${resolved_version}/${archive_name}"
-          checksum_url="${archive_url}.sha256"
-          checksum_file="${RUNNER_TEMP}/${archive_name}.sha256"
-
-          curl -fsSL "${checksum_url}" -o "${checksum_file}"
-          expected_hash="$(awk -v name="${archive_name}" '$2 == name { print $1 }' "${checksum_file}")"
-          [[ ${expected_hash} =~ ^[[:xdigit:]]{64}$ ]] || \
-            fail "invalid SHA-256 metadata for ${resolved_version}"
-          expected_hash=${expected_hash,,}
-
+          # The existing v1.0.0 release has only GitHub's generated source archive,
+          # so this proof of concept cannot know the archive digest until after the
+          # first download.  Populate the configuration first, download from that
+          # configuration, then complete the hash field from the downloaded bytes.
           cat >"${config_file}" <<EOF
           CODING_STANDARD_VERSION=${resolved_version}
-          CODING_STANDARD_HASH=sha256:${expected_hash}
+          CODING_STANDARD_HASH=
           CODING_STANDARD_URL=${archive_url}
           CODING_STANDARD_DESTINATION=${destination}
           EOF
 
           declare -A coding_standard=()
-          while IFS= read -r line || [[ -n ${line} ]]; do
-            [[ -z ${line} || ${line} == \#* ]] && continue
-            [[ ${line} == *=* ]] || fail "malformed line in ${config_file}: ${line}"
+          read_config
 
-            key=${line%%=*}
-            value=${line#*=}
-            case ${key} in
-              CODING_STANDARD_VERSION|CODING_STANDARD_HASH|CODING_STANDARD_URL|CODING_STANDARD_DESTINATION)
-                ;;
-              *)
-                fail "unsupported key in ${config_file}: ${key}"
-                ;;
-            esac
+          [[ ${coding_standard[CODING_STANDARD_VERSION]:-} == "${resolved_version}" ]] || \
+            fail 'configured standards version changed during population'
+          [[ ${coding_standard[CODING_STANDARD_URL]:-} == "${archive_url}" ]] || \
+            fail 'configured standards URL changed during population'
+          [[ ${coding_standard[CODING_STANDARD_DESTINATION]:-} == doc/standards ]] || \
+            fail 'CODING_STANDARD_DESTINATION must be doc/standards'
+          [[ -z ${coding_standard[CODING_STANDARD_HASH]:-} ]] || \
+            fail 'initial proof-of-concept hash must be empty before download'
 
-            [[ -z ${coding_standard[${key}]+x} ]] || fail "duplicate key in ${config_file}: ${key}"
-            coding_standard[${key}]=${value}
-          done <"${config_file}"
+          archive_file="${RUNNER_TEMP}/coding-standards-source.tar.gz"
+          curl \
+            -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            "${coding_standard[CODING_STANDARD_URL]}" \
+            -o "${archive_file}"
+
+          actual_hash="$(sha256sum "${archive_file}" | awk '{print $1}')"
+          [[ ${actual_hash} =~ ^[[:xdigit:]]{64}$ ]] || fail 'unable to calculate source archive SHA-256'
+          actual_hash=${actual_hash,,}
+
+          cat >"${config_file}" <<EOF
+          CODING_STANDARD_VERSION=${resolved_version}
+          CODING_STANDARD_HASH=sha256:${actual_hash}
+          CODING_STANDARD_URL=${archive_url}
+          CODING_STANDARD_DESTINATION=${destination}
+          EOF
+
+          read_config
 
           for key in \
             CODING_STANDARD_VERSION \
@@ -116,21 +153,13 @@ jobs:
           done
 
           [[ ${coding_standard[CODING_STANDARD_VERSION]} == "${resolved_version}" ]] || \
-            fail 'configured standards version changed during population'
-          [[ ${coding_standard[CODING_STANDARD_DESTINATION]} == doc/standards ]] || \
-            fail 'CODING_STANDARD_DESTINATION must be doc/standards'
-          [[ ${coding_standard[CODING_STANDARD_HASH]} =~ ^sha256:[[:xdigit:]]{64}$ ]] || \
-            fail 'CODING_STANDARD_HASH must contain a SHA-256 digest'
+            fail 'final configured standards version is incorrect'
+          [[ ${coding_standard[CODING_STANDARD_HASH]} == "sha256:${actual_hash}" ]] || \
+            fail 'final configured standards hash is incorrect'
           [[ ${coding_standard[CODING_STANDARD_URL]} == "${archive_url}" ]] || \
-            fail 'CODING_STANDARD_URL does not identify the resolved release asset'
-
-          archive_file="${RUNNER_TEMP}/${archive_name}"
-          curl -fsSL "${coding_standard[CODING_STANDARD_URL]}" -o "${archive_file}"
-
-          actual_hash="$(sha256sum "${archive_file}" | awk '{print $1}')"
-          configured_hash=${coding_standard[CODING_STANDARD_HASH]#sha256:}
-          [[ ${actual_hash} == "${configured_hash}" ]] || \
-            fail "archive SHA-256 mismatch: expected ${configured_hash}, got ${actual_hash}"
+            fail 'final configured standards URL is incorrect'
+          [[ ${coding_standard[CODING_STANDARD_DESTINATION]} == doc/standards ]] || \
+            fail 'final configured standards destination is incorrect'
 
           while IFS= read -r entry; do
             normalized=${entry#./}
@@ -141,9 +170,6 @@ jobs:
               /*|..|../*|*/../*|*/..)
                 fail "unsafe archive member: ${entry}"
                 ;;
-              standards|standards/*)
-                fail "archive contains an unexpected outer standards directory: ${entry}"
-                ;;
             esac
           done < <(tar -tzf "${archive_file}")
 
@@ -151,13 +177,22 @@ jobs:
             fail 'archive contains a symbolic or hard link'
           fi
 
-          stage="$(mktemp -d "${RUNNER_TEMP}/coding-standards.XXXXXX")"
-          trap 'find "${stage}" -mindepth 1 -delete 2>/dev/null || true; rmdir "${stage}" 2>/dev/null || true' EXIT
-          tar -xzf "${archive_file}" -C "${stage}"
+          source_stage="$(mktemp -d "${RUNNER_TEMP}/coding-standards-source.XXXXXX")"
+          standards_stage="$(mktemp -d "${RUNNER_TEMP}/coding-standards.XXXXXX")"
+          trap 'find "${source_stage}" -mindepth 1 -delete 2>/dev/null || true; rmdir "${source_stage}" 2>/dev/null || true; find "${standards_stage}" -mindepth 1 -delete 2>/dev/null || true; rmdir "${standards_stage}" 2>/dev/null || true' EXIT
+
+          tar -xzf "${archive_file}" -C "${source_stage}"
+
+          mapfile -t source_roots < <(find "${source_stage}" -mindepth 1 -maxdepth 1 -print)
+          [[ ${#source_roots[@]} -eq 1 ]] || fail 'source archive must contain exactly one repository root'
+          [[ -d ${source_roots[0]} ]] || fail 'source archive repository root is not a directory'
+          [[ -d ${source_roots[0]}/standards ]] || fail 'source archive does not contain standards/'
+
+          cp -a "${source_roots[0]}/standards/." "${standards_stage}/"
 
           mkdir -p "${coding_standard[CODING_STANDARD_DESTINATION]}"
           find "${coding_standard[CODING_STANDARD_DESTINATION]}" -mindepth 1 -delete
-          cp -a "${stage}/." "${coding_standard[CODING_STANDARD_DESTINATION]}/"
+          cp -a "${standards_stage}/." "${coding_standard[CODING_STANDARD_DESTINATION]}/"
 
           printf '%s\n' 'Resolved configuration:'
           cat "${config_file}"
