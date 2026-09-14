@@ -6,8 +6,9 @@ AWK Minifier is a conservative AWK source-to-source transformer.  Maintained
 product code is portable AWK; Bash is repository orchestration only.
 
 Before changing behavior, read `README.md`, `doc/decisions.md`, the applicable
-ADRs under `doc/adr/`, and synchronized standards under `doc/standards/` when they
-are present.  Accepted ADRs are governance, not suggestions.
+ADRs under `doc/adr/`, and the committed standards under `doc/standards/`.
+Accepted ADRs and applicable standards under `doc/standards/` are governance, not
+suggestions.
 
 ## Product contract
 
@@ -36,7 +37,7 @@ The modular source must remain directly executable with repeated `awk -f`
 arguments in that order.  Do not replace explicit ordering with filesystem glob
 ordering or runtime plugin discovery.
 
-Maintained AWK source follows the synchronized AWK documentation standard from
+Maintained AWK source follows the committed AWK documentation standard from
 `coding_standards`.  Use `##` Doxygen blocks for maintained interfaces and
 ordinary `#` comments for narrow implementation notes.
 
@@ -98,29 +99,46 @@ to a shebang plus one program line.
 Do not silently fall back to copying `.dev.awk`, to self-minification, or to
 another transformer when the pinned dependency is missing or fails.
 
-`make build` must remain network-free and must not invoke dependency or standards
-synchronization implicitly.  Steady-state builds require prepared
+`make build` must remain network-free and must not invoke dependency acquisition or
+standards updates implicitly.  Steady-state builds require prepared
 `vendor/awk-minifier.awk` state; use `make deps` or `make all` before `make build`.
 
 ## Dependencies and standards
 
 Make directly bootstraps only `vendor/bashdeps.bash`, using the pinned version and
-SHA-256 digest in the Makefile.  Other repository tools belong in
+SHA-256 digest in the Makefile.  Other executable repository tools belong in
 `dependencies.txt`, including the pinned previous-release AWK Minifier used by the
 production build.
 
 Network boundaries:
 
-- `make deps` may access the network and repair tool dependency state;
-- `make deps-check` is offline and non-repairing;
-- `make standards` may access the network and synchronize shared standards;
-- `make standards-check` is offline and non-repairing;
+- `make deps` may access the network and repair executable tool dependency state;
+- `make deps-check` is offline and non-repairing; and
 - `make build`, `make test`, and `make docs` do not hide dependency acquisition.
 
-Shared standards come from `wesley-dean/coding_standards` through
-`dependencies-standards.txt`.  Do not edit synchronized copies under
-`doc/standards/`; change the upstream standard, update the immutable pin/digest,
-and resynchronize instead.
+The complete shared standards snapshot from `wesley-dean/coding_standards` is
+committed beneath `doc/standards/`.  `.codingstandardrc` records the concrete
+released version, release-archive SHA-256 digest, canonical source repository, and
+managed destination.  The repository contains no standards-fetching workflow,
+Make synchronization target, or standards dependency manifest.  Agents should use
+the committed files directly.
+
+For this repository, the general standards and AWK standards apply.  Repository,
+Markdown, ADR, Bash, or other shared standards also apply when their subject matter
+is present and relevant to the change.  Language-specific standards for unrelated
+implementation languages do not become applicable merely because the complete
+library is present.  Content beneath `examples/` is illustrative and non-normative
+unless a governing standard states otherwise.
+
+Apply every relevant standard unless an accepted repository-specific ADR or
+explicit repository policy supersedes or refines it.  Do not silently deviate from
+an applicable standard.  Do not edit imported shared standards locally to encode a
+project-specific exception; document the exception through repository governance.
+
+Shared-standard changes belong in the canonical `wesley-dean/coding_standards`
+repository.  A standards refresh selects a concrete released version, replaces the
+complete managed `doc/standards/` tree, updates `.codingstandardrc`, and is proposed
+through a normal pull request against the default branch.
 
 ## Tests
 

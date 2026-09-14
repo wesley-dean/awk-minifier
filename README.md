@@ -126,7 +126,7 @@ self-minification, and idempotence.
 
 The Makefile follows the dependency model used by
 [`wesley-dean/bootstrap`](https://github.com/wesley-dean/bootstrap): Make directly
-bootstraps only a pinned `bashdeps.bash`.  Bashdeps then manages other
+bootstraps only a pinned `bashdeps.bash`.  Bashdeps then manages executable
 repository-scoped tools declared in `dependencies.txt`.
 
 ```bash
@@ -144,21 +144,42 @@ Bashdeps.
 
 ## Shared standards
 
-Normative shared standards are synchronized separately from executable tools:
-
-```bash
-make standards        # may access the network
-make standards-check  # offline verification; does not repair state
-```
-
-`dependencies-standards.txt` maps pinned files from
+The complete shared standards library from
 [`wesley-dean/coding_standards`](https://github.com/wesley-dean/coding_standards)
-into `doc/standards/`, preserving their upstream hierarchy.  Imported standards
-and examples are synchronized copies and should not be edited locally.
+is committed beneath `doc/standards/`, preserving the upstream `standards/`
+directory hierarchy.
 
-Standards that do not yet exist upstream are not fabricated in this repository;
-they can be added to the manifest after they exist in `coding_standards` and can
-be pinned to immutable bytes.
+The project-root `.codingstandardrc` records the concrete released standards
+version, the SHA-256 digest of its `coding_standards.tar.gz` release artifact, the
+canonical source repository, and the managed destination.  The current snapshot is
+`coding_standards@v1.0.3`.
+
+These files are ordinary tracked repository content so developers and coding
+agents can read the governing standards from a normal checkout without a network
+bootstrap.  AWK Minifier contains no standards downloader, synchronization Make
+target, standards dependency manifest, or standards-update GitHub Actions
+workflow.
+
+Files beneath `doc/standards/` are governing project requirements, not suggestions.
+Apply every relevant standard unless an accepted repository-specific ADR or
+explicit project policy supersedes or refines it.  Do not silently deviate from an
+applicable standard.
+
+Imported standards are externally maintained copies and must not be edited
+locally.  Shared changes belong in `coding_standards`; adopting another release is
+an intentional repository maintenance change that replaces the complete managed
+`doc/standards/` tree, updates `.codingstandardrc`, and is reviewed through the
+normal pull-request process.
+
+Receiving the complete library does not make every language-specific standard
+applicable to AWK Minifier.  General and cross-cutting standards apply where
+relevant.  The AWK standards apply to maintained AWK source.  Other language
+standards apply only when their subject matter is relevant.  Content under
+`examples/` is illustrative and non-normative unless a governing standard states
+otherwise.
+
+See ADR-025 for the committed-snapshot rationale and ADR-026 for the versioned
+provenance and governance contract.
 
 ## Documentation
 

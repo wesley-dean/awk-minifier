@@ -145,11 +145,15 @@ build before comparing bytes.
 
 ## Dependency and documentation evidence
 
-`make deps` is the explicit network-capable path for repository tools;
+`make deps` is the explicit network-capable path for executable repository tools;
 `make deps-check` verifies prepared state offline.  The tool verification includes
 the pinned v0.2.1 AWK Minifier that participates in production artifact
-construction.  `make standards` and `make standards-check` provide the equivalent
-separate lifecycle for synchronized shared standards.
+construction.
+
+Shared coding standards are committed repository inputs under `doc/standards/`.
+Ordinary CI does not fetch, synchronize, or verify them against a remote source;
+the standards snapshot changes through the same reviewed Git process as other
+maintained repository documentation.
 
 `make docs` consumes prepared `awk-doxygen` and `adrctl` state without acquiring
 or repairing dependencies.  CI verifies generated ADR navigation and Doxygen HTML

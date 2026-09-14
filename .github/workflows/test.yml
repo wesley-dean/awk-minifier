@@ -47,17 +47,6 @@ jobs:
       - name: Build with prepared dependencies
         run: make build
 
-      - name: Synchronize and verify shared standards
-        run: |
-          make standards
-          make standards-check
-          test -f doc/standards/general/clean-architecture-standard.md
-          test -f doc/standards/general/clean-coding-standard.md
-          test -f doc/standards/general/conventional-commit-release-governance.md
-          test -f doc/standards/awk/documentation-standard.md
-          test -f doc/standards/examples/awk/documentation/example.awk
-          git check-ignore -q doc/standards/awk/documentation-standard.md
-
       - name: Verify distribution artifacts and checksums
         run: |
           mapfile -t artifacts < <(find dist -maxdepth 1 -type f -name 'awk-minifier*.awk' -perm -u+x -print | sort)
