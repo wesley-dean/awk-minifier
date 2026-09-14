@@ -7,7 +7,8 @@ product code is portable AWK; Bash is repository orchestration only.
 
 Before changing behavior, read `README.md`, `doc/decisions.md`, the applicable
 ADRs under `doc/adr/`, and the committed standards under `doc/standards/`.
-Accepted ADRs are governance, not suggestions.
+Accepted ADRs and applicable standards under `doc/standards/` are governance, not
+suggestions.
 
 ## Product contract
 
@@ -116,19 +117,28 @@ Network boundaries:
 - `make build`, `make test`, and `make docs` do not hide dependency acquisition.
 
 The complete shared standards snapshot from `wesley-dean/coding_standards` is
-committed beneath `doc/standards/`.  AWK Minifier contains no standards-fetching
-workflow, Make target, dependency manifest, or dedicated standards configuration.
-Agents should use the committed files directly.
+committed beneath `doc/standards/`.  `.codingstandardrc` records the concrete
+released version, release-archive SHA-256 digest, canonical source repository, and
+managed destination.  The repository contains no standards-fetching workflow,
+Make synchronization target, or standards dependency manifest.  Agents should use
+the committed files directly.
 
 For this repository, the general standards and AWK standards apply.  Repository,
-Markdown, ADR, or other shared standards also apply when their subject matter is
-present in the committed library and relevant to the change.  Language-specific
-standards for unrelated implementation languages do not become applicable merely
-because the complete library is present.
+Markdown, ADR, Bash, or other shared standards also apply when their subject matter
+is present and relevant to the change.  Language-specific standards for unrelated
+implementation languages do not become applicable merely because the complete
+library is present.  Content beneath `examples/` is illustrative and non-normative
+unless a governing standard states otherwise.
 
-Do not edit imported shared standards locally.  Change the canonical standard in
-`wesley-dean/coding_standards`, then adopt the updated snapshot here through a
-normal reviewed repository change.
+Apply every relevant standard unless an accepted repository-specific ADR or
+explicit repository policy supersedes or refines it.  Do not silently deviate from
+an applicable standard.  Do not edit imported shared standards locally to encode a
+project-specific exception; document the exception through repository governance.
+
+Shared-standard changes belong in the canonical `wesley-dean/coding_standards`
+repository.  A standards refresh selects a concrete released version, replaces the
+complete managed `doc/standards/` tree, updates `.codingstandardrc`, and is proposed
+through a normal pull request against the default branch.
 
 ## Tests
 
