@@ -2,9 +2,10 @@
 
 Thank you for contributing.
 
-Before proposing changes, read `README.md`, `AGENTS.md`, `doc/decisions.md`, and
-the ADRs relevant to the area being changed.  Accepted ADRs define the current
-architecture and should not be silently contradicted by an implementation change.
+Before proposing changes, read `README.md`, `AGENTS.md`, `doc/decisions.md`, the
+ADRs relevant to the area being changed, and the applicable committed standards
+under `doc/standards/`.  Accepted ADRs define the current architecture and should
+not be silently contradicted by an implementation change.
 
 ## Development workflow
 
@@ -36,18 +37,18 @@ make test AWK_BIN=mawk
 make test AWK_BIN=gawk
 ```
 
-Shared standards use their own lifecycle:
+The shared standards library is committed beneath `doc/standards/`; no standards
+fetch or synchronization command is required before development.  Imported shared
+standards should not be edited locally.  Shared changes belong in
+`wesley-dean/coding_standards` and are adopted here through a normal reviewed
+repository update.
 
-```bash
-make standards
-make standards-check
-```
-
-Do not make `build`, `test`, or `docs` silently acquire dependencies.
+Do not make `build`, `test`, or `docs` silently acquire dependencies or refresh
+shared standards.
 
 ## Source documentation
 
-Maintained AWK follows the shared AWK documentation standard synchronized from
+Maintained AWK follows the shared AWK documentation standard committed from
 `wesley-dean/coding_standards`.  Public and maintained source contracts should be
 captured in `##` Doxygen blocks compatible with `awk-doxygen`.
 

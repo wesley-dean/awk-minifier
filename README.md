@@ -126,7 +126,7 @@ self-minification, and idempotence.
 
 The Makefile follows the dependency model used by
 [`wesley-dean/bootstrap`](https://github.com/wesley-dean/bootstrap): Make directly
-bootstraps only a pinned `bashdeps.bash`.  Bashdeps then manages other
+bootstraps only a pinned `bashdeps.bash`.  Bashdeps then manages executable
 repository-scoped tools declared in `dependencies.txt`.
 
 ```bash
@@ -144,21 +144,27 @@ Bashdeps.
 
 ## Shared standards
 
-Normative shared standards are synchronized separately from executable tools:
-
-```bash
-make standards        # may access the network
-make standards-check  # offline verification; does not repair state
-```
-
-`dependencies-standards.txt` maps pinned files from
+The complete shared standards library from
 [`wesley-dean/coding_standards`](https://github.com/wesley-dean/coding_standards)
-into `doc/standards/`, preserving their upstream hierarchy.  Imported standards
-and examples are synchronized copies and should not be edited locally.
+is committed beneath `doc/standards/`, preserving the upstream `standards/`
+directory hierarchy.
 
-Standards that do not yet exist upstream are not fabricated in this repository;
-they can be added to the manifest after they exist in `coding_standards` and can
-be pinned to immutable bytes.
+These files are ordinary tracked repository content so developers and coding
+agents can read the governing standards from a normal checkout without a network
+bootstrap.  AWK Minifier does not contain a standards downloader, synchronization
+Make target, dedicated configuration file, or standards-update GitHub Actions
+workflow.
+
+Imported standards are externally maintained copies and should not be edited
+locally.  Shared changes belong in `coding_standards`; adopting a newer snapshot is
+an intentional repository maintenance change that replaces or updates
+`doc/standards/` and is reviewed through the normal Git workflow.
+
+Receiving the complete library does not make every language-specific standard
+applicable to AWK Minifier.  Repository governance, including `AGENTS.md`,
+determines applicability.
+
+See ADR-025 for the committed-snapshot decision.
 
 ## Documentation
 

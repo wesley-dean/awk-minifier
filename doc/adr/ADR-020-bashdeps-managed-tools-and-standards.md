@@ -4,35 +4,42 @@ Date: 2026-09-12
 
 ## Status
 
-Accepted
+Accepted, partially superseded by ADR-025.
+
+ADR-025 supersedes this ADR only for shared coding-standards acquisition and
+lifecycle.  This ADR remains governing for bashdeps-managed executable repository
+tools and their explicit network and offline-verification boundaries.
 
 ## Context
 
 The project needs reproducible repository tooling such as `awk-doxygen`, `adrctl`,
-and eventually a previously released AWK Minifier.  It also consumes shared coding
-and documentation standards maintained in `wesley-dean/coding_standards`.
+and a previously released AWK Minifier.  It also consumes shared coding and
+documentation standards maintained in `wesley-dean/coding_standards`.
 
-Bootstrap already demonstrates the desired dependency lifecycle: Make directly
+Bootstrap demonstrates the desired executable dependency lifecycle: Make directly
 bootstraps only bashdeps, validates its committed digest before execution, and
-uses bashdeps manifests for every other repository-managed dependency.  Network
-convergence and offline verification are deliberately separate operations.
+uses bashdeps manifests for every other repository-managed executable dependency.
+Network convergence and offline verification are deliberately separate operations.
 
-Standards differ from executable tooling in destination and update cadence.  They
-are normative imported documentation and should remain visibly synchronized from
-the upstream standards repository rather than copied and edited locally.
+ADR-020 originally extended that dependency model to shared standards through a
+second manifest and dedicated Make targets.  ADR-025 later supersedes that portion
+of this decision.  Shared standards are now ordinary committed repository content
+beneath `doc/standards/` and do not participate in the dependency manager.
 
 ## Decision Drivers
 
-- Reuse the proven Bootstrap dependency lifecycle.
+- Reuse the proven Bootstrap dependency lifecycle for executable repository tools.
 - Keep network access explicit and auditable.
-- Pin executable tools and normative standards to immutable bytes.
-- Avoid hidden standards refreshes during ordinary builds.
-- Preserve upstream directory structure so imported paths remain predictable.
-- Keep build, documentation, and verification usable offline after preparation.
+- Pin executable tools to immutable bytes.
+- Keep build, documentation, and verification usable offline after tool
+  preparation.
+- Keep shared governance material available in ordinary repository checkouts.
+- Avoid treating non-executable shared documentation as an executable dependency.
 
 ## Decision
 
-The Makefile SHALL follow the Bootstrap dependency pattern.
+The Makefile SHALL follow the Bootstrap dependency pattern for executable
+repository tools.
 
 Make directly owns only the bootstrap of `vendor/bashdeps.bash`.  The bootstrap
 recipe SHALL validate the committed SHA-256 digest, reuse a valid cached copy,
@@ -51,61 +58,49 @@ Expected tool dependencies include:
 
 - `awk-doxygen` for AWK source reference filtering;
 - `adrctl` for generated ADR navigation; and
-- after bootstrap, a previously released AWK Minifier for production minification.
+- a previously released AWK Minifier for production minification.
 
 A tool SHALL NOT remain in the manifest merely because template-bash previously
 used it.  In particular, Bash-Minifier and bash-doxygen are removed unless a
 current maintained source path actually requires them.
 
-### Standards dependencies
+### Shared standards
 
-Shared standards SHALL be declared separately in
-`dependencies-standards.txt`.  They SHALL be pinned to immutable raw GitHub URLs
-and committed SHA-256 digests from `wesley-dean/coding_standards`.
+The standards-management requirements originally contained in this ADR are
+historical and superseded by ADR-025.
 
-`make standards` MAY access the network and SHALL use bashdeps `sync` with:
+This ADR originally required `dependencies-standards.txt`, `make standards`, and
+`make standards-check` to synchronize individually pinned files beneath
+`doc/standards/`.  Those mechanisms are removed.
 
-```text
---dest-root doc/standards
-```
+ADR-025 now requires the complete shared standards snapshot to be committed as
+ordinary repository content beneath `doc/standards/`.  AWK Minifier contains no
+dedicated standards-fetching mechanism.  Imported shared standards are not edited
+locally; changes belong in `wesley-dean/coding_standards` and are adopted through
+an intentional repository update.
 
-`make standards-check` SHALL use bashdeps `verify` with the same destination root,
-remain offline/non-repairing, and fail when tracked imported standards differ from
-the pinned upstream bytes.
-
-Upstream `standards/` files SHALL be mapped beneath `doc/standards/` while
-preserving their relative hierarchy.  Upstream `examples/` files SHALL be mapped
-beneath `doc/standards/examples/` while preserving their relative hierarchy.
-
-Imported standards and examples are synchronized copies.  They SHALL NOT be
-edited locally; changes belong in `coding_standards`, followed by an intentional
-pin update and synchronization here.
-
-Ordinary `build`, `test`, and `docs` targets SHALL NOT invoke `make standards` or
-silently refresh normative documentation.  The `all` lifecycle MAY prepare tool
-dependencies before build, matching Bootstrap, but standards remain an explicit
-separate convergence action.
+Ordinary `build`, `test`, and `docs` targets SHALL NOT invoke standards acquisition
+or silently refresh normative documentation.
 
 ## Promises
 
-1. bashdeps is the only dependency manager Make bootstraps directly.
+1. bashdeps is the only executable repository dependency manager Make bootstraps
+   directly.
 2. Tool convergence is explicit through `make deps`.
-3. Standards convergence is explicit through `make standards`.
-4. `deps-check` and `standards-check` are offline and non-repairing.
-5. Shared standards preserve upstream directory structure under
-   `doc/standards/`.
-6. Imported standards are not forked through local edits.
-7. Build and documentation targets consume prepared state rather than hiding
-   network acquisition.
+3. `deps-check` is offline and non-repairing.
+4. Build and documentation targets consume prepared executable-tool state rather
+   than hiding network acquisition.
+5. Shared standards are governed by ADR-025 and do not participate in bashdeps.
+6. Imported shared standards are not forked through local edits.
 
 ## Non-Promises
 
 1. The repository does not install operating-system packages.
 2. Pinning and digests do not establish that dependency behavior is safe.
-3. Empty upstream example directories are not promised locally because Git does
-   not preserve empty directories.
-4. Running `make build` on an unprepared checkout does not promise to acquire
-   missing tools.
+3. Running `make build` on an unprepared checkout does not promise to acquire
+   missing executable tools.
+4. This ADR no longer defines a standards-update command, downloader, manifest,
+   or verification mechanism.
 
 ## Considered Alternatives
 
@@ -116,35 +111,34 @@ logic already centralized in bashdeps.
 
 ### Put Standards in dependencies.txt
 
-Rejected because standards use a different destination root and should not be
-silently refreshed as part of ordinary tool preparation.
+Rejected because standards are shared governance documents rather than executable
+repository tools.  ADR-025 supersedes the earlier separate-manifest design with a
+committed snapshot that is maintained through ordinary repository changes.
 
-### Vendor Hand-Maintained Copies of Standards
+### Maintain Standards Through a Dedicated Consumer Updater
+
+Rejected by ADR-025.  A consumer-side updater adds configuration, network logic,
+credentials or CI authority, and archive or checksum handling to perform an
+operation an authorized maintainer or coding agent can already propose directly as
+a reviewed Git change.
+
+### Maintain Independent Local Standards
 
 Rejected because local edits would create ambiguous authority and drift from the
-standards repository.
+canonical `coding_standards` repository.  The committed `doc/standards/` files are
+snapshots, not an independent fork.
 
-### Track Mutable main URLs Without Digests
+### Make build Run deps or Standards Acquisition
 
-Rejected because reproducibility requires immutable source identity plus expected
-bytes.
-
-### Make build Run deps or standards
-
-Rejected because build should remain an offline consumer of prepared state.  The
-higher-level `all` target can explicitly compose lifecycle steps without changing
-the meaning of `build` itself.
+Rejected because build should remain an offline consumer of prepared and committed
+state.  The higher-level `all` target can explicitly compose executable dependency
+preparation without changing the meaning of `build` itself.
 
 ## Consequences
 
-The Makefile gains the Bootstrap-style bashdeps bootstrap and two explicit
-manifest lifecycles.  The repository carries synchronized standard files as
-reviewable documentation while retaining a machine-verifiable statement of their
-upstream bytes.
-
-When `coding_standards` adds or changes a required document, this repository must
-intentionally update the immutable URL/digest pin and resynchronize.  Missing
-upstream standards cannot be fabricated locally to satisfy the manifest.
+The Makefile retains the Bootstrap-style bashdeps bootstrap and manifest lifecycle
+for executable tools only.  Shared standards travel with the repository checkout
+as committed documentation and require no Make target or dependency manifest.
 
 ## Superseded Decisions
 
@@ -153,8 +147,9 @@ by this product.
 
 This ADR refines ADR-005 and ADR-015.  Their dependency-boundary and attack-surface
 principles remain governing; this ADR replaces template-specific dependency
-choices with AWK Minifier's actual tools and separates normative standards into a
-second manifest.
+choices with AWK Minifier's actual executable tools.
+
+ADR-025 supersedes this ADR's standards-specific requirements.
 
 ## Related Decisions
 
@@ -164,3 +159,4 @@ second manifest.
 - ADR-015: Dependencies as Explicit Attack Surface
 - ADR-017: Generate ADR Navigation Ephemerally
 - ADR-019: Release Artifacts and Bootstrap Minification
+- ADR-025: Commit Shared Coding Standards as Repository Content
