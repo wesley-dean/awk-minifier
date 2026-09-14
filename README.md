@@ -149,22 +149,37 @@ The complete shared standards library from
 is committed beneath `doc/standards/`, preserving the upstream `standards/`
 directory hierarchy.
 
+The project-root `.codingstandardrc` records the concrete released standards
+version, the SHA-256 digest of its `coding_standards.tar.gz` release artifact, the
+canonical source repository, and the managed destination.  The current snapshot is
+`coding_standards@v1.0.3`.
+
 These files are ordinary tracked repository content so developers and coding
 agents can read the governing standards from a normal checkout without a network
-bootstrap.  AWK Minifier does not contain a standards downloader, synchronization
-Make target, dedicated configuration file, or standards-update GitHub Actions
+bootstrap.  AWK Minifier contains no standards downloader, synchronization Make
+target, standards dependency manifest, or standards-update GitHub Actions
 workflow.
 
-Imported standards are externally maintained copies and should not be edited
-locally.  Shared changes belong in `coding_standards`; adopting a newer snapshot is
-an intentional repository maintenance change that replaces or updates
-`doc/standards/` and is reviewed through the normal Git workflow.
+Files beneath `doc/standards/` are governing project requirements, not suggestions.
+Apply every relevant standard unless an accepted repository-specific ADR or
+explicit project policy supersedes or refines it.  Do not silently deviate from an
+applicable standard.
+
+Imported standards are externally maintained copies and must not be edited
+locally.  Shared changes belong in `coding_standards`; adopting another release is
+an intentional repository maintenance change that replaces the complete managed
+`doc/standards/` tree, updates `.codingstandardrc`, and is reviewed through the
+normal pull-request process.
 
 Receiving the complete library does not make every language-specific standard
-applicable to AWK Minifier.  Repository governance, including `AGENTS.md`,
-determines applicability.
+applicable to AWK Minifier.  General and cross-cutting standards apply where
+relevant.  The AWK standards apply to maintained AWK source.  Other language
+standards apply only when their subject matter is relevant.  Content under
+`examples/` is illustrative and non-normative unless a governing standard states
+otherwise.
 
-See ADR-025 for the committed-snapshot decision.
+See ADR-025 for the committed-snapshot rationale and ADR-026 for the versioned
+provenance and governance contract.
 
 ## Documentation
 
