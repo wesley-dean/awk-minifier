@@ -152,7 +152,7 @@ directory hierarchy.
 The project-root `.codingstandardrc` records the concrete released standards
 version, the SHA-256 digest of its `coding_standards.tar.gz` release artifact, the
 canonical source repository, and the managed destination.  The current snapshot is
-`coding_standards@v1.0.3`.
+`coding_standards@v1.0.9`.
 
 These files are ordinary tracked repository content so developers and coding
 agents can read the governing standards from a normal checkout without a network
@@ -183,8 +183,9 @@ provenance and governance contract.
 
 ## Documentation
 
-Maintained AWK source follows the shared AWK documentation standard and uses
-`awk-doxygen` for Doxygen input filtering.
+Maintained AWK source follows the shared AWK documentation standard at
+`doc/standards/awk/documentation-standard.md` and uses `awk-doxygen` for Doxygen
+input filtering.
 
 After repository dependencies have been prepared:
 
