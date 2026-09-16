@@ -4,7 +4,7 @@ Date: 2026-09-12
 
 ## Status
 
-Accepted, partially superseded by ADR-025.
+Accepted
 
 ADR-025 supersedes this ADR only for shared coding-standards acquisition and
 lifecycle.  This ADR remains governing for bashdeps-managed executable repository
