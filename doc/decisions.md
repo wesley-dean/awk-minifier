@@ -293,3 +293,15 @@ Applicable shared standards are governance rather than suggestions; accepted
 repository ADRs or explicit project policy may visibly refine or supersede them.
 
 See [ADR-026](adr/ADR-026-versioned-coding-standards-provenance.md).
+
+### ADR-027: Consolidate GitHub Actions Dependabot Maintenance
+
+The repository retains a weekly GitHub Actions version-update schedule and
+seven-day cooldown, now collecting eligible major, minor, and patch releases
+under one wildcard `actions-version-updates` group.  Security updates remain
+outside routine grouping; existing major-version auto-merge exclusions and
+repository review safeguards are preserved.  Large groups require risk-based
+review and relevant CI, particularly for release actions.  The policy neither
+guarantees one PR per week nor retroactively closes existing Dependabot PRs.
+
+See [ADR-027](adr/ADR-027-consolidate-github-actions-dependabot-maintenance.md).
