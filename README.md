@@ -142,6 +142,18 @@ transformer.
 System packages such as `awk`, `make`, and `doxygen` are not installed by
 Bashdeps.
 
+## Dependabot maintenance
+
+Weekly GitHub Actions version updates retain their seven-day cooldown but use
+one `actions-version-updates` group for eligible major, minor, and patch
+releases.  Dependabot security updates remain outside routine version-update
+grouping.  The existing non-major auto-merge boundary remains unchanged.
+
+This is a PR-generation policy and does not automatically replace outstanding
+Dependabot PRs or prove GitHub security settings or CODEOWNERS enforcement.
+Review grouped updates against the highest-risk dependency, especially release
+and publishing workflows.  See [ADR-027](doc/adr/ADR-027-consolidate-github-actions-dependabot-maintenance.md).
+
 ## Shared standards
 
 The complete shared standards library from
@@ -152,7 +164,7 @@ directory hierarchy.
 The project-root `.codingstandardrc` records the concrete released standards
 version, the SHA-256 digest of its `coding_standards.tar.gz` release artifact, the
 canonical source repository, and the managed destination.  The current snapshot is
-`coding_standards@v2.1.0`.
+`coding_standards@v3.2.0`.
 
 These files are ordinary tracked repository content so developers and coding
 agents can read the governing standards from a normal checkout without a network
