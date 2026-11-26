@@ -142,17 +142,20 @@ transformer.
 System packages such as `awk`, `make`, and `doxygen` are not installed by
 Bashdeps.
 
-## Dependabot maintenance
+## Dependency maintenance
 
-Weekly GitHub Actions version updates retain their seven-day cooldown but use
-one `actions-version-updates` group for eligible major, minor, and patch
-releases.  Dependabot security updates remain outside routine version-update
-grouping.  The existing non-major auto-merge boundary remains unchanged.
+Routine updates are now centrally managed by the Jenkins Renovate service,
+with explicit enrollment via root `renovate.json`.  The existing Dependabot
+GitHub Actions ecosystem has routine version-update PR creation disabled,
+while alerts and security updates remain independent.  The existing
+`dependabot[bot]`-scoped non-major auto-merge workflow remains for security
+updates; Renovate is subject to required checks and human code-owner review.
 
-This is a PR-generation policy and does not automatically replace outstanding
-Dependabot PRs or prove GitHub security settings or CODEOWNERS enforcement.
-Review grouped updates against the highest-risk dependency, especially release
-and publishing workflows.  See [ADR-027](doc/adr/ADR-027-consolidate-github-actions-dependabot-maintenance.md).
+After merging the configuration, verify `wesley-dean-renovate` has accepted
+write access, GitHub security settings are effective, and the Jenkins job
+runs successfully.  Existing routine Dependabot PRs are retired only when
+the migration is effective.  See
+[ADR-028](doc/adr/ADR-028-migrate-routine-dependency-updates-to-renovate.md).
 
 ## Shared standards
 

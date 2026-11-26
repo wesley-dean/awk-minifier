@@ -305,3 +305,16 @@ review and relevant CI, particularly for release actions.  The policy neither
 guarantees one PR per week nor retroactively closes existing Dependabot PRs.
 
 See [ADR-027](adr/ADR-027-consolidate-github-actions-dependabot-maintenance.md).
+
+### ADR-028: Move Routine Dependency Updates to Centrally Managed Renovate
+
+Routine GitHub Actions updates move from scheduled Dependabot to the existing
+Jenkins-run Renovate service, enrolled through root `renovate.json`.
+Dependabot alerts, advisory-driven security updates, non-major security PR
+merge safeguards, pinned executable revisions, and code-owner approvals remain
+separate and protected.  ADR-028 partially supersedes ADR-027's active
+Dependabot provider and its restrictions on the routine PR limit while keeping
+its security and review rationale.  Accepted machine-account write access,
+repository protection, and effective security settings require separate
+operational verification.  See
+[ADR-028](adr/ADR-028-migrate-routine-dependency-updates-to-renovate.md).
